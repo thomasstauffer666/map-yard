@@ -11,6 +11,8 @@ Goal: Create good looking, somewhat realistic, random fantasy SVG maps for regio
 ## Randomness
 
 - https://en.wikipedia.org/wiki/Perlin_noise
+- https://en.wikipedia.org/wiki/Simplex_noise
+- http://devmag.org.za/2009/05/03/poisson-disk-sampling/
 
 ## Region
 
