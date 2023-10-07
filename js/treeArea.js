@@ -9,7 +9,7 @@ maskImage.src = "svg/area.svg";
 
 const sourceWidth='100';
 const sourceHeight='100';
-const sourceAmount = 201;
+const sourceAmount = 200;
 
 function generateRandom(maxLimit = 1000){
     let rand = Math. random() * maxLimit;
@@ -23,19 +23,18 @@ function generateRandom(maxLimit = 1000){
 sourceImage.onload = function () {
   maskImage.onload = function () {
     
-    // draw source
     for (let i = 0; i < sourceAmount; i++){
         const x = generateRandom();
         const y = generateRandom();
+        context.drawImage(sourceImage, x, y, sourceWidth, sourceHeight);
 
-        const dx = Math.abs(x - 500);
-        const dy = Math.abs(y - 250);
-        const r = Math.sqrt(dx*dx + dy*dy);
-
-        if (r<500){
-            context.drawImage(sourceImage, x, y, sourceWidth, sourceHeight);  
-        }
-        
+        // // draw in circle
+        // const dx = Math.abs(x - 500);
+        // const dy = Math.abs(y - 250);
+        // const r = Math.sqrt(dx*dx + dy*dy);
+        // if (r<500){
+        //     context.drawImage(sourceImage, x, y, sourceWidth, sourceHeight);  
+        // }
     }
 
     // apply mask via source-in and reset composite operation to default ("source-over")
