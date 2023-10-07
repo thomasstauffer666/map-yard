@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<style>
+		svg {
+			border: 1px dashed black;
+		}
+	</style>
+	<script type="module">
+		function createCircle(point, color) {
+			const e = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+			e.setAttribute('cx', point.x);
+			e.setAttribute('cy', point.y);
+			e.setAttribute('r', 2);
+			e.setAttribute('style', 'fill:' + color);
+			return e;
+		}
+
+		function createLine(point1, point2, color) {
+			const e = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+			e.setAttribute('x1', point1.x);
+			e.setAttribute('y1', point1.y);
+			e.setAttribute('x2', point2.x);
+			e.setAttribute('y2', point2.y);
+			e.setAttribute('style', 'stroke:' + color);
+			return e;
+		}
+
+		function drawGrid(svg, gridSize) {
+			for (let y = 0; y <= HEIGHT; y += gridSize) {
+				svg.appendChild(createLine({ x: 0, y: y }, { x: WIDTH, y: y }, '#999'));
+			}
+			for (let x = 0; x <= WIDTH; x += gridSize) {
+				svg.appendChild(createLine({ x: x, y: 0 }, { x: x, y: HEIGHT }, '#999'));
+			}
+		}
+
+		function randomMinMax(min, max) {
+			return min + (Math.random() * (max - min));
+		}
+
+		function randomInt(max) {
+			return Math.floor(Math.random() * max);
+		}
+
+		function randomUnitVector() {
+			const angle = Math.random() * 2 * Math.PI;
+			return { x: Math.cos(angle), y: Math.sin(angle) };
+		}
+
+		// https://en.wikipedia.org/wiki/Smoothstep
+		// 0 <= x <= 1
+		function smootherstep(x) {
+			return 6 * (x ** 5) - 15 * (x ** 4) + 10 * (x ** 3);
+		}
+
+		// https://en.wikipedia.org/wiki/Linear_interpolation
+		function lerp(a, b, x) {
+			return a + x * (b - a);
+		}
+
+		function gridMake(width, height, callable) {
+			const data = [];
+			for (let y = 0; y < height; y += 1) {
+				const row = [];
+				for (let x = 0; x < width; x += 1) {
+					const v = callable({ x: x, y: y });
+					row.push(v);
+				}
+				data.push(row);
+			}
+			return { width: width, height: height, data: data };
+		}
+
+		function gridForEach(grid, callable) {
+			for (let y = 0; y < grid.height; y += 1) {
+				for (let x = 0; x < grid.width; x += 1) {
+					const bucket = { x: x, y: y };
+					callable(grid, bucket);
+				}
+			}
+		}
+
+		function grid2ForEach(grid, callable) {
+			for (let y = 1; y < (grid.height - 1); y += 1) {
+				for (let x = 1; x < (grid.width - 1); x += 1) {
+					const bucket = { x: x, y: y };
+					callable(grid, bucket);
+				}
+			}
+		}
+
+		function perlinCreate(width, height) {
+			return { gradients: gridMake(width, height, () => randomUnitVector()) };
+		}
+
+		function perlinNoise(perlin, p) {
+			function interpolate(a, b, x) {
+				return a + smootherstep(x) * (b - a);
+			}
+
+			function dot(p, pf) {
+				const gradient = perlin.gradients.data[pf.y][pf.x];
+				const v = { x: p.x - pf.x, y: p.y - pf.y };
+				return v.x * gradient.x + v.y * gradient.y;
+			}
+
+			const xf = Math.floor(p.x);
+			const yf = Math.floor(p.y);
+			const tl = dot(p, { x: xf + 0, y: yf + 0 });
+			const tr = dot(p, { x: xf + 1, y: yf + 0 });
+			const bl = dot(p, { x: xf + 0, y: yf + 1 });
+			const br = dot(p, { x: xf + 1, y: yf + 1 });
+			const t = interpolate(tl, tr, p.x - xf);
+			const b = interpolate(bl, br, p.x - xf);
+			const v = interpolate(t, b, p.y - yf);
+			return v;
+		}
+
+		const WIDTH = 1000;
+		const HEIGHT = 800;
+		const GRID_SIZE = 10;
+
+		// h = 0..360, s = 0..100, l = 0..100
+		function hslString(h, s, l) {
+			return 'hsl(' + h + ',' + s + '%,' + l + '%)';
+		}
+
+		function main() {
+
+			const svg = document.getElementById('svg');
+			svg.setAttribute('width', WIDTH);
+			svg.setAttribute('height', HEIGHT);
+
+			const perlin = perlinCreate(10 + 2, 8 + 2);
+
+			const gridOffsetMin = 0.2;
+			const gridOffsetMax = 0.8;
+			const g = gridMake(Math.floor(WIDTH / GRID_SIZE), Math.floor(HEIGHT / GRID_SIZE), (p) => {
+				return {
+					x: (randomMinMax(gridOffsetMin, gridOffsetMax) + p.x) * GRID_SIZE,
+					y: (randomMinMax(gridOffsetMin, gridOffsetMax) + p.y) * GRID_SIZE
+				};
+			});
+
+			drawGrid(svg, GRID_SIZE);
+
+			gridForEach(g, (grid, bucket) => {
+				const p = grid.data[bucket.y][bucket.x];
+				let noise = perlinNoise(perlin, { x: p.x / 200, y: p.y / 200 });
+				const level = (noise + 1.0);
+				const biome = level > 0.8 ? 'green' : 'blue';
+				grid.data[bucket.y][bucket.x].biome = biome;
+				const colorLand = hslString(110, 100, Math.floor(level * 50) - 20);
+				const colorWater = hslString(350 - Math.floor(level * 200), 100, 50);
+				const color = level > 0.8 ? colorLand : colorWater;
+				svg.appendChild(createCircle(p, color));
+			});
+
+			grid2ForEach(g, (grid, bucket) => {
+				const p = grid.data[bucket.y][bucket.x];
+				const pr = grid.data[bucket.y + 0][bucket.x + 1];
+				const pb = grid.data[bucket.y + 1][bucket.x + 0];
+				const pbr = grid.data[bucket.y + 1][bucket.x + 1];
+				if (p.biome === 'blue' && pr.biome === 'blue' && pb.biome === 'green' && pbr.biome === 'green') {
+					svg.appendChild(createLine(p, pr, 'blue'));
+				}
+				if (p.biome === 'blue' && pr.biome === 'blue' && pb.biome === 'green' && pbr.biome === 'blue') {
+					svg.appendChild(createLine(p, pbr, 'blue'));
+				}
+				if (p.biome === 'green' && pr.biome === 'blue' && pb.biome === 'green' && pbr.biome === 'blue') {
+					svg.appendChild(createLine(pr, pbr, 'blue'));
+				}
+				if (p.biome === 'blue' && pr.biome === 'blue' && pb.biome === 'blue' && pbr.biome === 'green') {
+					svg.appendChild(createLine(pb, pr, 'blue'));
+				}
+				if (p.biome === 'blue' && pr.biome === 'green' && pb.biome === 'blue' && pbr.biome === 'green') {
+					svg.appendChild(createLine(p, pb, 'blue'));
+				}
+				if (p.biome === 'green' && pr.biome === 'green' && pb.biome === 'blue' && pbr.biome === 'blue') {
+					svg.appendChild(createLine(pb, pbr, 'blue'));
+				}
+				if (p.biome === 'blue' && pr.biome === 'green' && pb.biome === 'blue' && pbr.biome === 'blue') {
+					svg.appendChild(createLine(p, pbr, 'blue'));
+				}
+				if (p.biome === 'green' && pr.biome === 'blue' && pb.biome === 'blue' && pbr.biome === 'blue') {
+					svg.appendChild(createLine(pb, pr, 'blue'));
+				}
+			});
+		}
+
+		document.addEventListener('DOMContentLoaded', main);
+	</script>
+
+<body>
+	<svg id="svg"></svg>
+</body>
+
+</html>
