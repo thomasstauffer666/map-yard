@@ -3,7 +3,14 @@ Goal: Create good looking, somewhat realistic, random fantasy SVG maps for regio
 
 # Inspiration
 
-- https://davesmapper.com/
+- https://en.wikipedia.org/wiki/Superformula
+- https://en.wikipedia.org/wiki/Voronoi_diagram
+- https://azgaar.wordpress.com/
+- https://www.redblobgames.com
+
+## Randomness
+
+- https://en.wikipedia.org/wiki/Perlin_noise
 
 ## Region
 
@@ -23,10 +30,13 @@ Goal: Create good looking, somewhat realistic, random fantasy SVG maps for regio
 
 ## World
 
-- Azgaar Fantasy Map Generator
-  - https://azgaar.github.io/Fantasy-Map-Generator/
-  - https://github.com/Azgaar/Fantasy-Map-Generator
-  - https://azgaar.wordpress.com/
+- https://azgaar.github.io/Fantasy-Map-Generator/
+- https://github.com/Azgaar/Fantasy-Map-Generator
+
+## Dungeon
+
+- https://probabletrain.itch.io/dungeon-scrawl
+- https://watabou.itch.io/one-page-dungeon
 
 ## 3D
 
@@ -36,13 +46,9 @@ Goal: Create good looking, somewhat realistic, random fantasy SVG maps for regio
 
 - https://zarkonnen.itch.io/planet-generator
 
-## Dungeon
-
-- https://probabletrain.itch.io/dungeon-scrawl
-- https://watabou.itch.io/one-page-dungeon
-
-## Misc
+## Misc Generators
 
 - https://davesmapper.com
-- https://www.kassoon.com/dnd/town-generator/
+- https://www.kassoon.com/dnd/saved-generators/
 - https://pendicepaper.com/hexroll/
+- https://github.com/watabou
