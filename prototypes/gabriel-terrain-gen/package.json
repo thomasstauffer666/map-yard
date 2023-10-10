@@ -1,0 +1,6 @@
+{
+  "type": "commonjs",
+  "dependencies": {
+    "noisejs": "^2.1.0"
+  }
+}
