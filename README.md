@@ -1,6 +1,8 @@
 
 Goal: Create good looking, somewhat realistic, random fantasy SVG maps for regions. Not only a city, not a whole world, just the size for a cute story, and tiny little adventure, ...
 
+Current state of the project: Trying out different ideas, later then merge some ideas together. If you like to contribute to this project, create a new directory or copy an existing directoy.
+
 # Inspiration
 
 - https://en.wikipedia.org/wiki/Superformula
