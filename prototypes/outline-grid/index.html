@@ -86,20 +86,10 @@
 			return { width: width, height: height, data: data };
 		}
 
-		function gridForEach(grid, callable) {
-			for (let y = 0; y < grid.height; y += 1) {
-				for (let x = 0; x < grid.width; x += 1) {
-					const bucket = { x: x, y: y };
-					callable(grid, bucket);
-				}
-			}
-		}
-
-		function grid2ForEach(grid, callable) {
-			for (let y = 1; y < (grid.height - 1); y += 1) {
-				for (let x = 1; x < (grid.width - 1); x += 1) {
-					const bucket = { x: x, y: y };
-					callable(grid, bucket);
+		function gridForEach(grid, border, callable) {
+			for (let y = border; y < (grid.height - border); y += 1) {
+				for (let x = border; x < (grid.width - border); x += 1) {
+					callable(grid, { x: x, y: y });
 				}
 			}
 		}
@@ -108,7 +98,7 @@
 			return { gradients: gridMake(width, height, () => randomUnitVector()) };
 		}
 
-		function perlinNoise(perlin, p) {
+		function perlinNoise(perlin, coord) {
 			function interpolate(a, b, x) {
 				return a + smootherstep(x) * (b - a);
 			}
@@ -119,97 +109,175 @@
 				return v.x * gradient.x + v.y * gradient.y;
 			}
 
-			const xf = Math.floor(p.x);
-			const yf = Math.floor(p.y);
-			const tl = dot(p, { x: xf + 0, y: yf + 0 });
-			const tr = dot(p, { x: xf + 1, y: yf + 0 });
-			const bl = dot(p, { x: xf + 0, y: yf + 1 });
-			const br = dot(p, { x: xf + 1, y: yf + 1 });
-			const t = interpolate(tl, tr, p.x - xf);
-			const b = interpolate(bl, br, p.x - xf);
-			const v = interpolate(t, b, p.y - yf);
+			const xf = Math.floor(coord.x);
+			const yf = Math.floor(coord.y);
+			const tl = dot(coord, { x: xf + 0, y: yf + 0 });
+			const tr = dot(coord, { x: xf + 1, y: yf + 0 });
+			const bl = dot(coord, { x: xf + 0, y: yf + 1 });
+			const br = dot(coord, { x: xf + 1, y: yf + 1 });
+			const t = interpolate(tl, tr, coord.x - xf);
+			const b = interpolate(bl, br, coord.x - xf);
+			const v = interpolate(t, b, coord.y - yf);
 			return v;
 		}
 
 		const WIDTH = 1000;
-		const HEIGHT = 800;
-		const GRID_SIZE = 20;
+		const HEIGHT = 500;
+		const GRID_SIZE = 30;
 
 		// h = 0..360, s = 0..100, l = 0..100
 		function hslString(h, s, l) {
 			return 'hsl(' + h + ',' + s + '%,' + l + '%)';
 		}
 
-		function main() {
+		async function loadsvg(filename) {
+			const response = await fetch(filename);
+			const text = await response.text();
+			const svg = (new DOMParser()).parseFromString(text, 'image/svg+xml');
+			return svg.children[0].children[2];
+		}
 
+		async function main() {
 			const svg = document.getElementById('svg');
 			svg.setAttribute('width', WIDTH);
 			svg.setAttribute('height', HEIGHT);
 
+			const names = ['mountain1.svg', 'mountain2.svg', 'mountain3.svg'];
+			const mountains = await Promise.all(names.map($ => loadsvg($)));
+
 			const perlin = perlinCreate(10 + 2, 8 + 2);
 
-			const gridOffsetMin = 0.2;
-			const gridOffsetMax = 0.8;
+			const gridBorderMin = 0.2;
+			const gridBorderMax = 0.8;
 			const g = gridMake(Math.floor(WIDTH / GRID_SIZE), Math.floor(HEIGHT / GRID_SIZE), (p) => {
 				return {
-					x: (randomMinMax(gridOffsetMin, gridOffsetMax) + p.x) * GRID_SIZE,
-					y: (randomMinMax(gridOffsetMin, gridOffsetMax) + p.y) * GRID_SIZE
+					x: (randomMinMax(gridBorderMin, gridBorderMax) + p.x) * GRID_SIZE,
+					y: (randomMinMax(gridBorderMin, gridBorderMax) + p.y) * GRID_SIZE
 				};
 			});
 
 			drawGrid(svg, GRID_SIZE);
 
-			gridForEach(g, (grid, bucket) => {
-				const p = grid.data[bucket.y][bucket.x];
+			function biomeFromLevel(level) {
+				if (level > 1.4) return 'mountain';
+				if (level > 1.0 && Math.random() < 0.02) return 'town';
+				if (level > 0.8) return 'grass';
+				return 'water';
+			}
+
+			const towns = [];
+			// assign level & biomes
+			gridForEach(g, 0, (grid, tile) => {
+				const p = grid.data[tile.y][tile.x];
 				let noise = perlinNoise(perlin, { x: p.x / 200, y: p.y / 200 });
-				const level = (noise + 1.0);
-				const biome = level > 0.8 ? 'green' : 'blue';
-				grid.data[bucket.y][bucket.x].biome = biome;
-				const colorLand = hslString(110, 100, Math.floor(level * 50) - 20);
-				const colorWater = hslString(350 - Math.floor(level * 200), 100, 50);
-				const color = level > 0.8 ? colorLand : colorWater;
-				svg.appendChild(createCircle(p, color));
+				p.level = noise + 1.0; // 0 .. 2
+				p.biome = biomeFromLevel(p.level);
+				if (p.biome === 'town') {
+					towns.push({ x: p.x, y: p.y });
+				}
 			});
 
-			grid2ForEach(g, (grid, bucket) => {
-				const p = grid.data[bucket.y][bucket.x];
-				const pr = grid.data[bucket.y + 0][bucket.x + 1];
-				const pb = grid.data[bucket.y + 1][bucket.x + 0];
-				const pbr = grid.data[bucket.y + 1][bucket.x + 1];
-				if (p.biome === 'blue' && pr.biome === 'blue' && pb.biome === 'green' && pbr.biome === 'green') {
-					svg.appendChild(createLine(p, pr, 'blue'));
-					//svg.appendChild(createQuadraticBezier(p, pr, pr, 'blue'));
+			function distance(a, b) {
+				const dx = a.x - b.x;
+				const dy = a.y - b.y;
+				return Math.sqrt(dx ** 2 + dy ** 2);
+			}
+
+			// streets
+			// only search the closes city
+			for (const from of towns) {
+				const toList = [];
+				for (const to of towns) {
+					if ((from.x !== to.x) || (from.y !== to.y)) {
+						toList.push({ x: to.x, y: to.y, distance: distance(from, to) });
+					}
 				}
-				if (p.biome === 'blue' && pr.biome === 'blue' && pb.biome === 'green' && pbr.biome === 'blue') {
-					svg.appendChild(createLine(p, pbr, 'blue'));
-					//svg.appendChild(createQuadraticBezier(p, pr, pbr, 'blue'));
-				}
-				if (p.biome === 'green' && pr.biome === 'blue' && pb.biome === 'green' && pbr.biome === 'blue') {
-					svg.appendChild(createLine(pr, pbr, 'blue'));
-				}
-				if (p.biome === 'blue' && pr.biome === 'blue' && pb.biome === 'blue' && pbr.biome === 'green') {
-					svg.appendChild(createLine(pb, pr, 'blue'));
-				}
-				if (p.biome === 'blue' && pr.biome === 'green' && pb.biome === 'blue' && pbr.biome === 'green') {
-					svg.appendChild(createLine(p, pb, 'blue'));
-				}
-				if (p.biome === 'green' && pr.biome === 'green' && pb.biome === 'blue' && pbr.biome === 'blue') {
-					svg.appendChild(createLine(pb, pbr, 'blue'));
-				}
-				if (p.biome === 'blue' && pr.biome === 'green' && pb.biome === 'blue' && pbr.biome === 'blue') {
-					svg.appendChild(createLine(p, pbr, 'blue'));
-				}
-				if (p.biome === 'green' && pr.biome === 'blue' && pb.biome === 'blue' && pbr.biome === 'blue') {
-					svg.appendChild(createLine(pb, pr, 'blue'));
-					//svg.appendChild(createQuadraticBezier(pb, pbr, pr, 'blue'));
+				toList.sort((a, b) => {
+					return a.distance > b.distance ? 1 : -1;
+				});
+				svg.appendChild(createLine(from, toList[0], '#999'));
+			}
+
+			// color tile
+			const BIOME_COLORS = {
+				'town': '#f0f',
+				'water': '#00f',
+				'grass': '#9f9',
+				'mountain': '#999',
+			};
+			gridForEach(g, 0, (grid, tile) => {
+				const p = grid.data[tile.y][tile.x];
+				svg.appendChild(createCircle(p, BIOME_COLORS[p.biome]));
+			});
+
+			// mountains
+			const items = [];
+			gridForEach(g, 0, (grid, tile) => {
+				const p = grid.data[tile.y][tile.x];
+				if (p.biome === 'mountain') {
+					const m = mountains[randomInt(mountains.length)];
+					const node = m.cloneNode(true);
+					const xScale = 1.1 + (Math.random() * 0.2);
+					const yScale = 1.3 + (Math.random() * 0.2);
+					const x = p.x;
+					const y = p.y;
+					items.push({ x: x, y: y, xs: xScale, ys: yScale, node });
 				}
 			});
+
+			items.sort((a, b) => {
+				return (a.y > b.y) ? 1 : -1;
+			});
+
+			for (const item of items) {
+				const node = item.node;
+				node.setAttribute('transform', 'translate(' + item.x + ' ' + item.y + ') scale(' + item.xs + ' ' + item.ys + ')')
+				svg.appendChild(node);
+			}
+
+			// draw coast
+			gridForEach(g, 1, (grid, tile) => {
+				const p = grid.data[tile.y][tile.x];
+				const pr = grid.data[tile.y + 0][tile.x + 1];
+				const pb = grid.data[tile.y + 1][tile.x + 0];
+				const pbr = grid.data[tile.y + 1][tile.x + 1];
+				if (p.biome === 'water' && pr.biome === 'water' && pb.biome === 'grass' && pbr.biome === 'grass') {
+					svg.appendChild(createLine(p, pr, 'blue'));
+					//svg.appendChild(createQuadraticBezier(p, pr, pr, 'water'));
+				}
+				if (p.biome === 'water' && pr.biome === 'water' && pb.biome === 'grass' && pbr.biome === 'water') {
+					svg.appendChild(createLine(p, pbr, 'blue'));
+					//svg.appendChild(createQuadraticBezier(p, pr, pbr, 'water'));
+				}
+				if (p.biome === 'grass' && pr.biome === 'water' && pb.biome === 'grass' && pbr.biome === 'water') {
+					svg.appendChild(createLine(pr, pbr, 'blue'));
+				}
+				if (p.biome === 'water' && pr.biome === 'water' && pb.biome === 'water' && pbr.biome === 'grass') {
+					svg.appendChild(createLine(pb, pr, 'blue'));
+				}
+				if (p.biome === 'water' && pr.biome === 'grass' && pb.biome === 'water' && pbr.biome === 'grass') {
+					svg.appendChild(createLine(p, pb, 'blue'));
+				}
+				if (p.biome === 'grass' && pr.biome === 'grass' && pb.biome === 'water' && pbr.biome === 'water') {
+					svg.appendChild(createLine(pb, pbr, 'blue'));
+				}
+				if (p.biome === 'water' && pr.biome === 'grass' && pb.biome === 'water' && pbr.biome === 'water') {
+					svg.appendChild(createLine(p, pbr, 'blue'));
+				}
+				if (p.biome === 'grass' && pr.biome === 'water' && pb.biome === 'water' && pbr.biome === 'water') {
+					svg.appendChild(createLine(pb, pr, 'blue'));
+					//svg.appendChild(createQuadraticBezier(pb, pbr, pr, 'water'));
+				}
+			});
+
 		}
 
 		document.addEventListener('DOMContentLoaded', main);
+		//setTimeout(main, 400);
 	</script>
 
 <body>
+	<object id="mountain1" type="image/svg+xml" data="mountain1.svg" style="display:none"></object>
 	<svg id="svg"></svg>
 </body>
 
