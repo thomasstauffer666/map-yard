@@ -192,10 +192,12 @@
 						toList.push({ x: to.x, y: to.y, distance: distance(from, to) });
 					}
 				}
-				toList.sort((a, b) => {
-					return a.distance > b.distance ? 1 : -1;
-				});
-				svg.appendChild(createLine(from, toList[0], '#999'));
+				if (toList.length > 0) {
+					toList.sort((a, b) => {
+						return a.distance > b.distance ? 1 : -1;
+					});
+					svg.appendChild(createLine(from, toList[0], '#999'));
+				}
 			}
 
 			// color tile
