@@ -36,8 +36,14 @@
 			return e;
 		}
 
-		function lineCenter(point1, point2) {
-			return { x: (point1.x + point2.y) / 2, y: (point1.y + point2.y) / 2 };
+		function middle(a, b) {
+			return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+		}
+
+		function distance(a, b) {
+			const dx = a.x - b.x;
+			const dy = a.y - b.y;
+			return Math.sqrt(dx ** 2 + dy ** 2);
 		}
 
 		function drawGrid(svg, gridSize) {
@@ -49,10 +55,12 @@
 			}
 		}
 
+		// exlusive max
 		function randomMinMax(min, max) {
 			return min + (Math.random() * (max - min));
 		}
 
+		// exlusive max
 		function randomInt(max) {
 			return Math.floor(Math.random() * max);
 		}
@@ -121,21 +129,25 @@
 			return v;
 		}
 
-		const WIDTH = 1000;
-		const HEIGHT = 500;
-		const GRID_SIZE = 30;
-
 		// h = 0..360, s = 0..100, l = 0..100
 		function hslString(h, s, l) {
 			return 'hsl(' + h + ',' + s + '%,' + l + '%)';
 		}
 
-		async function loadsvg(filename) {
+		async function loadSVG(filename) {
 			const response = await fetch(filename);
 			const text = await response.text();
 			const svg = (new DOMParser()).parseFromString(text, 'image/svg+xml');
 			return svg.children[0].children[2];
 		}
+
+		// https://de.wikipedia.org/wiki/Xorshift
+		// XORShift128
+		// TODO random generator with seed
+
+		const WIDTH = 1000;
+		const HEIGHT = 800;
+		const GRID_SIZE = 30;
 
 		async function main() {
 			const svg = document.getElementById('svg');
@@ -143,7 +155,7 @@
 			svg.setAttribute('height', HEIGHT);
 
 			const names = ['mountain1.svg', 'mountain2.svg', 'mountain3.svg'];
-			const mountains = await Promise.all(names.map($ => loadsvg($)));
+			const mountains = await Promise.all(names.map($ => loadSVG($)));
 
 			const perlin = perlinCreate(10 + 2, 8 + 2);
 
@@ -177,26 +189,19 @@
 				}
 			});
 
-			function distance(a, b) {
-				const dx = a.x - b.x;
-				const dy = a.y - b.y;
-				return Math.sqrt(dx ** 2 + dy ** 2);
-			}
 
 			// streets
-			// only search the closes city
-			for (const from of towns) {
-				const toList = [];
-				for (const to of towns) {
-					if ((from.x !== to.x) || (from.y !== to.y)) {
-						toList.push({ x: to.x, y: to.y, distance: distance(from, to) });
+			const SHOW_STREETS = true;
+			if (SHOW_STREETS) {
+				for (const from of towns) {
+					const toList = towns.
+						filter(to => (from.x != to.x) || (from.y != to.y)).
+						map(to => ({ x: to.x, y: to.y, distance: distance(from, to) }));
+					// only search the closest town
+					if (toList.length > 0) {
+						toList.sort((a, b) => a.distance > b.distance ? 1 : -1);
+						svg.appendChild(createLine(from, toList[0], '#999'));
 					}
-				}
-				if (toList.length > 0) {
-					toList.sort((a, b) => {
-						return a.distance > b.distance ? 1 : -1;
-					});
-					svg.appendChild(createLine(from, toList[0], '#999'));
 				}
 			}
 
@@ -207,10 +212,13 @@
 				'grass': '#9f9',
 				'mountain': '#999',
 			};
-			gridForEach(g, 0, (grid, tile) => {
-				const p = grid.data[tile.y][tile.x];
-				svg.appendChild(createCircle(p, BIOME_COLORS[p.biome]));
-			});
+			const SHOW_BIOMS = true;
+			if (SHOW_BIOMS) {
+				gridForEach(g, 0, (grid, tile) => {
+					const p = grid.data[tile.y][tile.x];
+					svg.appendChild(createCircle(p, BIOME_COLORS[p.biome]));
+				});
+			}
 
 			// mountains
 			const items = [];
@@ -231,44 +239,102 @@
 				return (a.y > b.y) ? 1 : -1;
 			});
 
-			for (const item of items) {
-				const node = item.node;
-				node.setAttribute('transform', 'translate(' + item.x + ' ' + item.y + ') scale(' + item.xs + ' ' + item.ys + ')')
-				svg.appendChild(node);
+			const SHOW_MOUNTAINS = true;
+			if (SHOW_MOUNTAINS) {
+				for (const item of items) {
+					const node = item.node;
+					node.setAttribute('transform', 'translate(' + item.x + ' ' + item.y + ') scale(' + item.xs + ' ' + item.ys + ')')
+					svg.appendChild(node);
+				}
 			}
 
 			// draw coast
 			gridForEach(g, 1, (grid, tile) => {
 				const p = grid.data[tile.y][tile.x];
+				const pl = grid.data[tile.y + 0][tile.x - 1];
 				const pr = grid.data[tile.y + 0][tile.x + 1];
+				const pt = grid.data[tile.y - 1][tile.x - 0];
 				const pb = grid.data[tile.y + 1][tile.x + 0];
+				const ptl = grid.data[tile.y - 1][tile.x - 1];
+				const ptr = grid.data[tile.y - 1][tile.x + 1];
+				const pbl = grid.data[tile.y + 1][tile.x - 1];
 				const pbr = grid.data[tile.y + 1][tile.x + 1];
-				if (p.biome === 'water' && pr.biome === 'water' && pb.biome === 'grass' && pbr.biome === 'grass') {
-					svg.appendChild(createLine(p, pr, 'blue'));
-					//svg.appendChild(createQuadraticBezier(p, pr, pr, 'water'));
+				let ps = [];
+
+				// tr
+				if (p.biome === 'water' && pt.biome == 'water' && ptr.biome == 'water' && pr.biome == 'grass') {
+					//svg.appendChild(createLine(p, middle(p, ptr), '#00f'));
+					ps.push(ptr);
 				}
-				if (p.biome === 'water' && pr.biome === 'water' && pb.biome === 'grass' && pbr.biome === 'water') {
-					svg.appendChild(createLine(p, pbr, 'blue'));
-					//svg.appendChild(createQuadraticBezier(p, pr, pbr, 'water'));
+				if (p.biome === 'water' && pt.biome == 'water' && ptr.biome == 'grass' && pr.biome == 'grass') {
+					//svg.appendChild(createLine(p, middle(p, pt), '#00f'));
+					ps.push(pt);
 				}
-				if (p.biome === 'grass' && pr.biome === 'water' && pb.biome === 'grass' && pbr.biome === 'water') {
-					svg.appendChild(createLine(pr, pbr, 'blue'));
+				if (p.biome === 'water' && pt.biome == 'grass' && ptr.biome == 'grass' && pr.biome == 'water') {
+					//svg.appendChild(createLine(p, middle(p, pr), '#00f'));
+					ps.push(pr);
 				}
-				if (p.biome === 'water' && pr.biome === 'water' && pb.biome === 'water' && pbr.biome === 'grass') {
-					svg.appendChild(createLine(pb, pr, 'blue'));
+				if (p.biome === 'water' && pt.biome == 'grass' && ptr.biome == 'water' && pr.biome == 'water') {
+					//svg.appendChild(createLine(p, middle(p, ptr), '#00f'));
+					ps.push(ptr);
 				}
-				if (p.biome === 'water' && pr.biome === 'grass' && pb.biome === 'water' && pbr.biome === 'grass') {
-					svg.appendChild(createLine(p, pb, 'blue'));
+				// br
+				if (p.biome === 'water' && pb.biome == 'water' && pbr.biome == 'water' && pr.biome == 'grass') {
+					//svg.appendChild(createLine(p, middle(p, pbr), '#00f'));
+					ps.push(pbr);
 				}
-				if (p.biome === 'grass' && pr.biome === 'grass' && pb.biome === 'water' && pbr.biome === 'water') {
-					svg.appendChild(createLine(pb, pbr, 'blue'));
+				if (p.biome === 'water' && pb.biome == 'water' && pbr.biome == 'grass' && pr.biome == 'grass') {
+					//svg.appendChild(createLine(p, middle(p, pb), '#00f'));
+					ps.push(pb);
 				}
-				if (p.biome === 'water' && pr.biome === 'grass' && pb.biome === 'water' && pbr.biome === 'water') {
-					svg.appendChild(createLine(p, pbr, 'blue'));
+				if (p.biome === 'water' && pb.biome == 'grass' && pbr.biome == 'water' && pr.biome == 'water') {
+					//svg.appendChild(createLine(p, middle(p, pbr), '#00f'));
+					ps.push(pbr);
 				}
-				if (p.biome === 'grass' && pr.biome === 'water' && pb.biome === 'water' && pbr.biome === 'water') {
-					svg.appendChild(createLine(pb, pr, 'blue'));
-					//svg.appendChild(createQuadraticBezier(pb, pbr, pr, 'water'));
+				if (p.biome === 'water' && pb.biome == 'grass' && pbr.biome == 'grass' && pr.biome == 'water') {
+					//svg.appendChild(createLine(p, middle(p, pr), '#00f'));
+					ps.push(pr);
+				}
+				// bl
+				if (p.biome === 'water' && pb.biome == 'water' && pbl.biome == 'water' && pl.biome == 'grass') {
+					//svg.appendChild(createLine(p, middle(p, pbl), '#00f'));
+					ps.push(pbl);
+				}
+				if (p.biome === 'water' && pb.biome == 'water' && pbl.biome == 'grass' && pl.biome == 'grass') {
+					//svg.appendChild(createLine(p, middle(p, pb), '#00f'));
+					ps.push(pb);
+				}
+				if (p.biome === 'water' && pb.biome == 'grass' && pbl.biome == 'water' && pl.biome == 'water') {
+					//svg.appendChild(createLine(p, middle(p, pbl), '#00f'));
+					ps.push(pbl);
+				}
+				if (p.biome === 'water' && pb.biome == 'grass' && pbl.biome == 'grass' && pl.biome == 'water') {
+					//svg.appendChild(createLine(p, middle(p, pl), '#00f'));
+					ps.push(pl);
+				}
+				// tl
+				if (p.biome === 'water' && pt.biome == 'water' && ptl.biome == 'water' && pl.biome == 'grass') {
+					//svg.appendChild(createLine(p, middle(p, ptl), '#00f'));
+					ps.push(ptl);
+				}
+				if (p.biome === 'water' && pt.biome == 'water' && ptl.biome == 'grass' && pl.biome == 'grass') {
+					//svg.appendChild(createLine(p, middle(p, pt), '#00f'));
+					ps.push(pt);
+				}
+				if (p.biome === 'water' && pt.biome == 'grass' && ptl.biome == 'water' && pl.biome == 'water') {
+					//svg.appendChild(createLine(p, middle(p, ptl), '#00f'));
+					ps.push(ptl);
+				}
+				if (p.biome === 'water' && pt.biome == 'grass' && ptl.biome == 'grass' && pl.biome == 'water') {
+					//svg.appendChild(createLine(p, middle(p, pl), '#00f'));
+					ps.push(pl);
+				}
+
+				if (ps.length == 2) {
+					svg.appendChild(createQuadraticBezier(middle(p, ps[0]), p, middle(p, ps[1]), '#00f'));
+				} else if (ps.length == 4) {
+					svg.appendChild(createQuadraticBezier(middle(p, ps[0]), p, middle(p, ps[1]), '#00f'));
+					svg.appendChild(createQuadraticBezier(middle(p, ps[2]), p, middle(p, ps[3]), '#00f'));
 				}
 			});
 
