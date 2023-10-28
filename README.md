@@ -3,6 +3,14 @@ Goal: Create good looking, somewhat realistic, random fantasy SVG maps for regio
 
 Current state of the project: Trying out different ideas, later then merge some ideas together. If you like to contribute to this project, create a new directory or copy an existing directoy.
 
+# Current Prototypes
+
+- https://thomasstauffer666.github.io/map-yard/prototypes/trees/index.html
+- https://thomasstauffer666.github.io/map-yard/prototypes/gabriel-terrain-gen/index.html
+- https://thomasstauffer666.github.io/map-yard/prototypes/mountains-bezier/index.html
+- https://thomasstauffer666.github.io/map-yard/prototypes/outline-grid/index.html
+
+
 # Inspiration
 
 - https://en.wikipedia.org/wiki/Superformula
