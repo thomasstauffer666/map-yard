@@ -10,19 +10,28 @@ Current state of the project: Trying out different ideas, later then merge some 
 - https://thomasstauffer666.github.io/map-yard/prototypes/mountains-bezier/index.html
 - https://thomasstauffer666.github.io/map-yard/prototypes/outline-grid/index.html
 
-
 # Inspiration
 
+## Misc
+
+- https://en.wikipedia.org/wiki/Signed_distance_function
 - https://en.wikipedia.org/wiki/Superformula
-- https://en.wikipedia.org/wiki/Voronoi_diagram
 - https://azgaar.wordpress.com/
 - https://www.redblobgames.com
+- http://pcg.wikidot.com/
+
+## Voronoi
+
+- https://en.wikipedia.org/wiki/Voronoi_diagram
+- https://en.wikipedia.org/wiki/Lloyd%27s_algorithm
 
 ## Randomness
 
 - https://en.wikipedia.org/wiki/Perlin_noise
 - https://en.wikipedia.org/wiki/Simplex_noise
 - http://devmag.org.za/2009/05/03/poisson-disk-sampling/
+
+# Generators
 
 ## Region
 
@@ -64,3 +73,8 @@ Current state of the project: Trying out different ideas, later then merge some 
 - https://www.kassoon.com/dnd/saved-generators/
 - https://pendicepaper.com/hexroll/
 - https://github.com/watabou
+
+# Third Party Examples
+
+- https://grishaverse.com/map-of-the-grishaverse/
+- https://www.illustrationx.com/artists/MikeHall/103771
