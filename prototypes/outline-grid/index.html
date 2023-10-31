@@ -55,18 +55,8 @@
 			}
 		}
 
-		// exlusive max
-		function randomMinMax(min, max) {
-			return min + (Math.random() * (max - min));
-		}
-
-		// exlusive max
-		function randomInt(max) {
-			return Math.floor(Math.random() * max);
-		}
-
-		function randomUnitVector() {
-			const angle = Math.random() * 2 * Math.PI;
+		function unitVector(randomNormalized) {
+			const angle = randomNormalized * 2 * Math.PI;
 			return { x: Math.cos(angle), y: Math.sin(angle) };
 		}
 
@@ -102,8 +92,45 @@
 			}
 		}
 
-		function perlinCreate(width, height) {
-			return { gradients: gridMake(width, height, () => randomUnitVector()) };
+		// rnh = Random Number Hash
+
+		// TODO this is not good enough, patterns are easily visible if loop is one
+		function rnhNorm3(...params) {
+			const sum = params.reduce((acc, $) => acc + $, 0.0);
+			const seed = sum / params.length;
+			let s = rngCreate(seed);
+			for (let i = 0; i < 30; i += 1) {
+				s = rngNext(s);
+			}
+			return s.w / UINT32_MAX;
+		}
+
+		// TODO also not good
+		function rnhNorm2(...params) {
+			const s = params.map($ => $.toString()).join('');
+			let hash = 0;
+			for (let i = 0; i < s.length; i++) {
+				hash = (hash << 5) - hash + s.charCodeAt(i);
+			}
+			const result = (hash >>> 0) / UINT32_MAX;
+			return result;
+		}
+
+		// TODO use a proper hash function not random
+		function rnhNorm(...params) {
+			//const result = rnhNorm2(...params);
+			const result = Math.random();
+			console.assert((result >= 0.0) && (result <= 1.0));
+			return result;
+		}
+
+		function rnhMinMax(min, max, ...params) {
+			const r = rnhNorm(...params);
+			return min + (r * (max - min));
+		}
+
+		function perlinCreate(seed, width, height) {
+			return gridMake(width, height, p => unitVector(rnhNorm(seed, p.x, p.y)));
 		}
 
 		function perlinNoise(perlin, coord) {
@@ -112,7 +139,7 @@
 			}
 
 			function dot(p, pf) {
-				const gradient = perlin.gradients.data[pf.y][pf.x];
+				const gradient = perlin.data[pf.y][pf.x];
 				const v = { x: p.x - pf.x, y: p.y - pf.y };
 				return v.x * gradient.x + v.y * gradient.y;
 			}
@@ -141,39 +168,79 @@
 			return svg.children[0].children[2];
 		}
 
+		const UINT32_MAX = 2 ** 32;
+
+		function wrapUInt32(x) {
+			return x >>> 0;
+		}
+
+		// rng = Random Number Generator
+
 		// https://de.wikipedia.org/wiki/Xorshift
 		// XORShift128
-		// TODO random generator with seed
+		function rngCreate(seed) {
+			console.assert((seed >= 0.0) && (seed <= 1.0));
+			// return { x: 123456789, y: 362436069, z: 521288629, w: 88675123 };
+			// TODO awful idea as it limits the possible initial states
+			return { x: Math.floor(seed * UINT32_MAX), y: 0, z: 0, w: 0 };
+		}
+
+		function rngNext(state) {
+			const t = state.x ^ (state.x << 11);
+			const result = {
+				x: state.y,
+				y: state.z,
+				z: state.w,
+				w: wrapUInt32(state.w ^ ((state.w >>> 19) ^ t ^ (t >>> 8)))
+			};
+			console.assert((result.w >= 0) && (result.w < UINT32_MAX));
+			return result;
+		}
 
 		const WIDTH = 1000;
 		const HEIGHT = 800;
-		const GRID_SIZE = 30;
+		const GRID_SIZE = 25;
 
 		async function main() {
 			const svg = document.getElementById('svg');
 			svg.setAttribute('width', WIDTH);
 			svg.setAttribute('height', HEIGHT);
 
+			// https://www.freepik.com/free-vector/vintage-monochrome-mountains-set_7997411.htm
 			const names = ['mountain1.svg', 'mountain2.svg', 'mountain3.svg'];
 			const mountains = await Promise.all(names.map($ => loadSVG($)));
 
-			const perlin = perlinCreate(10 + 2, 8 + 2);
+			// this would is the only user controlled number
+			const seed = 0.3; // Math.random();
+
+			const seedRandom = 0.7;
+			const seedX = 0.9;
+			const seedY = 0.8;
+
+			const perlin = perlinCreate(seed, 10 + 2, 8 + 2);
 
 			const gridBorderMin = 0.2;
 			const gridBorderMax = 0.8;
-			const g = gridMake(Math.floor(WIDTH / GRID_SIZE), Math.floor(HEIGHT / GRID_SIZE), (p) => {
+
+			const w = Math.floor(WIDTH / GRID_SIZE);
+			const h = Math.floor(HEIGHT / GRID_SIZE);
+			// TOOD use gridForEach for init?
+			const g = gridMake(w, h, (p) => {
+				const xn = p.x / w;
+				const yn = p.y / h;
 				return {
-					x: (randomMinMax(gridBorderMin, gridBorderMax) + p.x) * GRID_SIZE,
-					y: (randomMinMax(gridBorderMin, gridBorderMax) + p.y) * GRID_SIZE
+					random: rnhNorm(seed, seedRandom, xn, yn), // used in many places
+					x: (rnhMinMax(gridBorderMin, gridBorderMax, seed, seedX, xn, yn) + p.x) * GRID_SIZE,
+					y: (rnhMinMax(gridBorderMin, gridBorderMax, seed, seedY, xn, yn) + p.y) * GRID_SIZE
 				};
 			});
 
 			drawGrid(svg, GRID_SIZE);
 
-			function biomeFromLevel(level) {
-				if (level > 1.4) return 'mountain';
-				if (level > 1.0 && Math.random() < 0.02) return 'town';
-				if (level > 0.8) return 'grass';
+			function selectBiome(p) {
+				if (p.level > 1.4) return 'mountain';
+				if (p.level > 1.0 && p.random < 0.02) return 'town';
+				if (p.level > 0.8) return 'grass';
 				return 'water';
 			}
 
@@ -183,7 +250,7 @@
 				const p = grid.data[tile.y][tile.x];
 				let noise = perlinNoise(perlin, { x: p.x / 200, y: p.y / 200 });
 				p.level = noise + 1.0; // 0 .. 2
-				p.biome = biomeFromLevel(p.level);
+				p.biome = selectBiome(p);
 				if (p.biome === 'town') {
 					towns.push({ x: p.x, y: p.y });
 				}
@@ -205,18 +272,18 @@
 				}
 			}
 
-			// color tile
-			const BIOME_COLORS = {
+			// biomes
+			const BIOMES_COLORS = {
 				'town': '#f0f',
 				'water': '#00f',
 				'grass': '#9f9',
 				'mountain': '#999',
 			};
-			const SHOW_BIOMS = true;
-			if (SHOW_BIOMS) {
+			const SHOW_BIOMES = true;
+			if (SHOW_BIOMES) {
 				gridForEach(g, 0, (grid, tile) => {
 					const p = grid.data[tile.y][tile.x];
-					svg.appendChild(createCircle(p, BIOME_COLORS[p.biome]));
+					svg.appendChild(createCircle(p, BIOMES_COLORS[p.biome]));
 				});
 			}
 
@@ -225,10 +292,11 @@
 			gridForEach(g, 0, (grid, tile) => {
 				const p = grid.data[tile.y][tile.x];
 				if (p.biome === 'mountain') {
-					const m = mountains[randomInt(mountains.length)];
+					// TODO maybe do not use the same seed for everything
+					const m = mountains[Math.floor(p.random * mountains.length)];
 					const node = m.cloneNode(true);
-					const xScale = 1.1 + (Math.random() * 0.2);
-					const yScale = 1.3 + (Math.random() * 0.2);
+					const xScale = 1.1 + (p.random * 0.2);
+					const yScale = 1.3 + (p.random * 0.2);
 					const x = p.x;
 					const y = p.y;
 					items.push({ x: x, y: y, xs: xScale, ys: yScale, node });
@@ -239,8 +307,8 @@
 				return (a.y > b.y) ? 1 : -1;
 			});
 
-			const SHOW_MOUNTAINS = true;
-			if (SHOW_MOUNTAINS) {
+			const SHOW_ITEMS = true;
+			if (SHOW_ITEMS) {
 				for (const item of items) {
 					const node = item.node;
 					node.setAttribute('transform', 'translate(' + item.x + ' ' + item.y + ') scale(' + item.xs + ' ' + item.ys + ')')
@@ -263,76 +331,61 @@
 
 				// tr
 				if (p.biome === 'water' && pt.biome == 'water' && ptr.biome == 'water' && pr.biome == 'grass') {
-					//svg.appendChild(createLine(p, middle(p, ptr), '#00f'));
 					ps.push(ptr);
 				}
 				if (p.biome === 'water' && pt.biome == 'water' && ptr.biome == 'grass' && pr.biome == 'grass') {
-					//svg.appendChild(createLine(p, middle(p, pt), '#00f'));
 					ps.push(pt);
 				}
 				if (p.biome === 'water' && pt.biome == 'grass' && ptr.biome == 'grass' && pr.biome == 'water') {
-					//svg.appendChild(createLine(p, middle(p, pr), '#00f'));
 					ps.push(pr);
 				}
 				if (p.biome === 'water' && pt.biome == 'grass' && ptr.biome == 'water' && pr.biome == 'water') {
-					//svg.appendChild(createLine(p, middle(p, ptr), '#00f'));
 					ps.push(ptr);
 				}
 				// br
 				if (p.biome === 'water' && pb.biome == 'water' && pbr.biome == 'water' && pr.biome == 'grass') {
-					//svg.appendChild(createLine(p, middle(p, pbr), '#00f'));
 					ps.push(pbr);
 				}
 				if (p.biome === 'water' && pb.biome == 'water' && pbr.biome == 'grass' && pr.biome == 'grass') {
-					//svg.appendChild(createLine(p, middle(p, pb), '#00f'));
 					ps.push(pb);
 				}
 				if (p.biome === 'water' && pb.biome == 'grass' && pbr.biome == 'water' && pr.biome == 'water') {
-					//svg.appendChild(createLine(p, middle(p, pbr), '#00f'));
 					ps.push(pbr);
 				}
 				if (p.biome === 'water' && pb.biome == 'grass' && pbr.biome == 'grass' && pr.biome == 'water') {
-					//svg.appendChild(createLine(p, middle(p, pr), '#00f'));
 					ps.push(pr);
 				}
 				// bl
 				if (p.biome === 'water' && pb.biome == 'water' && pbl.biome == 'water' && pl.biome == 'grass') {
-					//svg.appendChild(createLine(p, middle(p, pbl), '#00f'));
 					ps.push(pbl);
 				}
 				if (p.biome === 'water' && pb.biome == 'water' && pbl.biome == 'grass' && pl.biome == 'grass') {
-					//svg.appendChild(createLine(p, middle(p, pb), '#00f'));
 					ps.push(pb);
 				}
 				if (p.biome === 'water' && pb.biome == 'grass' && pbl.biome == 'water' && pl.biome == 'water') {
-					//svg.appendChild(createLine(p, middle(p, pbl), '#00f'));
 					ps.push(pbl);
 				}
 				if (p.biome === 'water' && pb.biome == 'grass' && pbl.biome == 'grass' && pl.biome == 'water') {
-					//svg.appendChild(createLine(p, middle(p, pl), '#00f'));
 					ps.push(pl);
 				}
 				// tl
 				if (p.biome === 'water' && pt.biome == 'water' && ptl.biome == 'water' && pl.biome == 'grass') {
-					//svg.appendChild(createLine(p, middle(p, ptl), '#00f'));
 					ps.push(ptl);
 				}
 				if (p.biome === 'water' && pt.biome == 'water' && ptl.biome == 'grass' && pl.biome == 'grass') {
-					//svg.appendChild(createLine(p, middle(p, pt), '#00f'));
 					ps.push(pt);
 				}
 				if (p.biome === 'water' && pt.biome == 'grass' && ptl.biome == 'water' && pl.biome == 'water') {
-					//svg.appendChild(createLine(p, middle(p, ptl), '#00f'));
 					ps.push(ptl);
 				}
 				if (p.biome === 'water' && pt.biome == 'grass' && ptl.biome == 'grass' && pl.biome == 'water') {
-					//svg.appendChild(createLine(p, middle(p, pl), '#00f'));
 					ps.push(pl);
 				}
 
 				if (ps.length == 2) {
 					svg.appendChild(createQuadraticBezier(middle(p, ps[0]), p, middle(p, ps[1]), '#00f'));
 				} else if (ps.length == 4) {
+					// other combinations 0213 may also work
 					svg.appendChild(createQuadraticBezier(middle(p, ps[0]), p, middle(p, ps[1]), '#00f'));
 					svg.appendChild(createQuadraticBezier(middle(p, ps[2]), p, middle(p, ps[3]), '#00f'));
 				}
