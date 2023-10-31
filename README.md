@@ -10,6 +10,22 @@ Current state of the project: Trying out different ideas, later then merge some 
 - https://thomasstauffer666.github.io/map-yard/prototypes/mountains-bezier/index.html
 - https://thomasstauffer666.github.io/map-yard/prototypes/outline-grid/index.html
 
+# Elements
+
+- Compass Rose
+- Image Border
+- Lakes
+- Map Scale
+- Map Seed
+- Mountains
+- Names (Map, Towns, Lakes, Rivers, ...)
+- Places of Interest (Volcano, Pit, Cave, Dungeon, ...)
+- Rivers
+- Shadows / Lights
+- Streets / Paths
+- Towns
+- Trees
+
 # Inspiration
 
 ## Misc
