@@ -1,18 +1,53 @@
 
 Goal: Create good looking, somewhat realistic, random fantasy SVG maps for regions. Not only a city, not a whole world, just the size for a cute story, and tiny little adventure, ...
 
+Current state of the project: Trying out different ideas, later then merge some ideas together. If you like to contribute to this project, create a new directory or copy an existing directoy.
+
+# Current Prototypes
+
+- https://thomasstauffer666.github.io/map-yard/prototypes/trees/index.html
+- https://thomasstauffer666.github.io/map-yard/prototypes/gabriel-terrain-gen/index.html
+- https://thomasstauffer666.github.io/map-yard/prototypes/mountains-bezier/index.html
+- https://thomasstauffer666.github.io/map-yard/prototypes/outline-grid/index.html
+
+# Elements
+
+- Compass Rose
+- Image Border
+- Lakes
+- Map Scale
+- Map Seed
+- Mountains
+- Names (Map, Towns, Lakes, Rivers, ...)
+- Places of Interest (Volcano, Pit, Cave, Dungeon, ...)
+- Rivers
+- Shadows / Lights
+- Streets / Paths
+- Towns
+- Trees
+
 # Inspiration
 
+## Misc
+
+- https://en.wikipedia.org/wiki/Signed_distance_function
 - https://en.wikipedia.org/wiki/Superformula
-- https://en.wikipedia.org/wiki/Voronoi_diagram
 - https://azgaar.wordpress.com/
 - https://www.redblobgames.com
+- http://pcg.wikidot.com/
+
+## Voronoi
+
+- https://en.wikipedia.org/wiki/Voronoi_diagram
+- https://en.wikipedia.org/wiki/Lloyd%27s_algorithm
 
 ## Randomness
 
 - https://en.wikipedia.org/wiki/Perlin_noise
 - https://en.wikipedia.org/wiki/Simplex_noise
 - http://devmag.org.za/2009/05/03/poisson-disk-sampling/
+
+# Generators
 
 ## Region
 
@@ -54,3 +89,8 @@ Goal: Create good looking, somewhat realistic, random fantasy SVG maps for regio
 - https://www.kassoon.com/dnd/saved-generators/
 - https://pendicepaper.com/hexroll/
 - https://github.com/watabou
+
+# Third Party Examples
+
+- https://grishaverse.com/map-of-the-grishaverse/
+- https://www.illustrationx.com/artists/MikeHall/103771
