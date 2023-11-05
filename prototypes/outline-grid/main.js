@@ -130,6 +130,7 @@ function create(seed) {
 	// TOOD use gridForEach for init?
 	const g = gridMake(w, h, (p) => {
 		return {
+			// TODO use x, y to store tile coordinates, then gridForEach could use a tile a first param
 			random: rnhNorm([seed, seedRandom, p.x, p.y]), // used in many places
 			x: (rnhMinMax([seed, seedX, p.x, p.y], gridBorderMin, gridBorderMax) + p.x) * GRID_SIZE,
 			y: (rnhMinMax([seed, seedY, p.x, p.y], gridBorderMin, gridBorderMax) + p.y) * GRID_SIZE,
@@ -162,6 +163,8 @@ function draw(map, images) {
 
 	const isDrawGrid = document.getElementById('draw-grid').checked;
 	const isDrawBiomes = document.getElementById('draw-biomes').checked;
+	//const isDrawRose = document.getElementById('draw-rose').checked;
+	//const isDrawBorder = document.getElementById('draw-border').checked;
 
 	// grid
 	if (isDrawGrid) {
@@ -249,55 +252,55 @@ function draw(map, images) {
 		let ps = [];
 
 		// tr
-		if (p.biome === 'water' && pt.biome == 'water' && ptr.biome == 'water' && pr.biome == 'grass') {
+		if (p.biome === 'water' && pt.biome === 'water' && ptr.biome === 'water' && pr.biome !== 'water') {
 			ps.push(ptr);
 		}
-		if (p.biome === 'water' && pt.biome == 'water' && ptr.biome == 'grass' && pr.biome == 'grass') {
+		if (p.biome === 'water' && pt.biome === 'water' && ptr.biome !== 'water' && pr.biome !== 'water') {
 			ps.push(pt);
 		}
-		if (p.biome === 'water' && pt.biome == 'grass' && ptr.biome == 'grass' && pr.biome == 'water') {
+		if (p.biome === 'water' && pt.biome !== 'water' && ptr.biome !== 'water' && pr.biome === 'water') {
 			ps.push(pr);
 		}
-		if (p.biome === 'water' && pt.biome == 'grass' && ptr.biome == 'water' && pr.biome == 'water') {
+		if (p.biome === 'water' && pt.biome !== 'water' && ptr.biome === 'water' && pr.biome === 'water') {
 			ps.push(ptr);
 		}
 		// br
-		if (p.biome === 'water' && pb.biome == 'water' && pbr.biome == 'water' && pr.biome == 'grass') {
+		if (p.biome === 'water' && pb.biome === 'water' && pbr.biome === 'water' && pr.biome !== 'water') {
 			ps.push(pbr);
 		}
-		if (p.biome === 'water' && pb.biome == 'water' && pbr.biome == 'grass' && pr.biome == 'grass') {
+		if (p.biome === 'water' && pb.biome === 'water' && pbr.biome !== 'water' && pr.biome !== 'water') {
 			ps.push(pb);
 		}
-		if (p.biome === 'water' && pb.biome == 'grass' && pbr.biome == 'water' && pr.biome == 'water') {
+		if (p.biome === 'water' && pb.biome !== 'water' && pbr.biome === 'water' && pr.biome === 'water') {
 			ps.push(pbr);
 		}
-		if (p.biome === 'water' && pb.biome == 'grass' && pbr.biome == 'grass' && pr.biome == 'water') {
+		if (p.biome === 'water' && pb.biome !== 'water' && pbr.biome !== 'water' && pr.biome === 'water') {
 			ps.push(pr);
 		}
 		// bl
-		if (p.biome === 'water' && pb.biome == 'water' && pbl.biome == 'water' && pl.biome == 'grass') {
+		if (p.biome === 'water' && pb.biome === 'water' && pbl.biome === 'water' && pl.biome !== 'water') {
 			ps.push(pbl);
 		}
-		if (p.biome === 'water' && pb.biome == 'water' && pbl.biome == 'grass' && pl.biome == 'grass') {
+		if (p.biome === 'water' && pb.biome === 'water' && pbl.biome !== 'water' && pl.biome !== 'water') {
 			ps.push(pb);
 		}
-		if (p.biome === 'water' && pb.biome == 'grass' && pbl.biome == 'water' && pl.biome == 'water') {
+		if (p.biome === 'water' && pb.biome !== 'water' && pbl.biome === 'water' && pl.biome === 'water') {
 			ps.push(pbl);
 		}
-		if (p.biome === 'water' && pb.biome == 'grass' && pbl.biome == 'grass' && pl.biome == 'water') {
+		if (p.biome === 'water' && pb.biome !== 'water' && pbl.biome !== 'water' && pl.biome === 'water') {
 			ps.push(pl);
 		}
 		// tl
-		if (p.biome === 'water' && pt.biome == 'water' && ptl.biome == 'water' && pl.biome == 'grass') {
+		if (p.biome === 'water' && pt.biome === 'water' && ptl.biome === 'water' && pl.biome !== 'water') {
 			ps.push(ptl);
 		}
-		if (p.biome === 'water' && pt.biome == 'water' && ptl.biome == 'grass' && pl.biome == 'grass') {
+		if (p.biome === 'water' && pt.biome === 'water' && ptl.biome !== 'water' && pl.biome !== 'water') {
 			ps.push(pt);
 		}
-		if (p.biome === 'water' && pt.biome == 'grass' && ptl.biome == 'water' && pl.biome == 'water') {
+		if (p.biome === 'water' && pt.biome !== 'water' && ptl.biome === 'water' && pl.biome === 'water') {
 			ps.push(ptl);
 		}
-		if (p.biome === 'water' && pt.biome == 'grass' && ptl.biome == 'grass' && pl.biome == 'water') {
+		if (p.biome === 'water' && pt.biome !== 'water' && ptl.biome !== 'water' && pl.biome === 'water') {
 			ps.push(pl);
 		}
 
@@ -305,8 +308,8 @@ function draw(map, images) {
 			elementMap.appendChild(svgutil.createQuadraticBezier(middle(p, ps[0]), p, middle(p, ps[1]), '#00f'));
 		} else if (ps.length == 4) {
 			// other combinations 0213 may also work
-			elementMap.appendChild(svgutil.createQuadraticBezier(middle(p, ps[0]), p, middle(p, ps[1]), '#00f'));
-			elementMap.appendChild(svgutil.createQuadraticBezier(middle(p, ps[2]), p, middle(p, ps[3]), '#00f'));
+			elementMap.appendChild(svgutil.createQuadraticBezier(middle(p, ps[0]), p, middle(p, ps[2]), '#00f'));
+			elementMap.appendChild(svgutil.createQuadraticBezier(middle(p, ps[1]), p, middle(p, ps[3]), '#00f'));
 		}
 	});
 }
@@ -320,6 +323,8 @@ async function main() {
 	function clickCreate() {
 		const seed = parseFloat(document.getElementById('seed').value);
 		map = create(seed);
+		map.grid.data[17][35].biome = 'water';
+		map.grid.data[17][36].biome = 'water';
 		draw(map, images);
 	}
 
@@ -330,6 +335,7 @@ async function main() {
 	function clickMap(event) {
 		const x = Math.floor(event.offsetX / GRID_SIZE);
 		const y = Math.floor(event.offsetY / GRID_SIZE);
+		console.log(x, y);
 		map.grid.data[y][x].biome = 'water';
 		draw(map, images);
 	}
