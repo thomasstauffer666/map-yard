@@ -2,6 +2,8 @@
 import * as xxhash from './xxhash.js';
 import * as svgutil from './svgutil.js';
 
+const UINT32_MAX = 0xffffffff;
+
 function middle(a, b) {
 	return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
 }
@@ -47,7 +49,7 @@ function gridMake(width, height, callable) {
 function gridForEach(grid, border, callable) {
 	for (let y = border; y < (grid.height - border); y += 1) {
 		for (let x = border; x < (grid.width - border); x += 1) {
-			callable(grid, { x: x, y: y });
+			callable({ x: x, y: y });
 		}
 	}
 }
@@ -70,6 +72,8 @@ function rnhMinMax(seeds, min, max) {
 	const r = rnhNorm(seeds);
 	return min + (r * (max - min));
 }
+
+// Perlin
 
 function perlinCreate(seed, width, height) {
 	return gridMake(width, height, p => rnhUnitVector([seed, p.x, p.y]));
@@ -98,27 +102,20 @@ function perlinNoise(perlin, coord) {
 	return v;
 }
 
-const UINT32_MAX = 0xffffffff;
-
 /*
 function isUint32(x) {
 	return Number.isInteger(x) && (x >= 0) && (x <= UINT32_MAX);
 }
 */
 
+// TODO remove
 const WIDTH = 1000;
 const HEIGHT = 700;
 const GRID_SIZE = 25;
 
-async function main() {
-	const map = document.getElementById('svg');
-	map.setAttribute('width', WIDTH);
-	map.setAttribute('height', HEIGHT);
-
-	const mountains = await Promise.all(['mountain1.svg', 'mountain2.svg', 'mountain3.svg'].map($ => svgutil.load($)));
-
+function create(seed) {
 	// this would is the only user controlled number
-	const seed = 0.3; // Math.random();
+	//const seed = 0.3; // Math.random();
 
 	const seedRandom = 0.7;
 	const seedX = 0.9;
@@ -133,16 +130,12 @@ async function main() {
 	const h = Math.floor(HEIGHT / GRID_SIZE);
 	// TOOD use gridForEach for init?
 	const g = gridMake(w, h, (p) => {
-		const xn = p.x / w;
-		const yn = p.y / h;
 		return {
-			random: rnhNorm([seed, seedRandom, xn, yn]), // used in many places
-			x: (rnhMinMax([seed, seedX, xn, yn], gridBorderMin, gridBorderMax) + p.x) * GRID_SIZE,
-			y: (rnhMinMax([seed, seedY, xn, yn], gridBorderMin, gridBorderMax) + p.y) * GRID_SIZE
+			random: rnhNorm([seed, seedRandom, p.x, p.y]), // used in many places
+			x: (rnhMinMax([seed, seedX, p.x, p.y], gridBorderMin, gridBorderMax) + p.x) * GRID_SIZE,
+			y: (rnhMinMax([seed, seedY, p.x, p.y], gridBorderMin, gridBorderMax) + p.y) * GRID_SIZE
 		};
 	});
-
-	map.appendChild(svgutil.createGrid(WIDTH, HEIGHT, GRID_SIZE));
 
 	function selectBiome(p) {
 		if (p.level > 1.4) return 'mountain';
@@ -153,8 +146,8 @@ async function main() {
 
 	const towns = [];
 	// assign level & biomes
-	gridForEach(g, 0, (grid, tile) => {
-		const p = grid.data[tile.y][tile.x];
+	gridForEach(g, 0, (tile) => {
+		const p = g.data[tile.y][tile.x];
 		let noise = perlinNoise(perlin, { x: p.x / 200, y: p.y / 200 });
 		p.level = noise + 1.0; // 0 .. 2
 		p.biome = selectBiome(p);
@@ -163,20 +156,34 @@ async function main() {
 		}
 	});
 
-
 	// streets
-	const SHOW_STREETS = true;
-	if (SHOW_STREETS) {
-		for (const from of towns) {
-			const toList = towns.
-				filter(to => (from.x != to.x) || (from.y != to.y)).
-				map(to => ({ x: to.x, y: to.y, distance: distance(from, to) }));
-			// only search the closest town
-			if (toList.length > 0) {
-				toList.sort((a, b) => a.distance > b.distance ? 1 : -1);
-				map.appendChild(svgutil.createLine(from, toList[0], '#999'));
-			}
+	const streets = [];
+	for (const from of towns) {
+		const toList = towns.
+			filter(to => (from.x != to.x) || (from.y != to.y)).
+			map(to => ({ x: to.x, y: to.y, distance: distance(from, to) }));
+		// only search the closest town
+		if (toList.length > 0) {
+			toList.sort((a, b) => a.distance > b.distance ? 1 : -1);
+			streets.push({ from: from, to: toList[0] });
 		}
+	}
+
+	return { grid: g, streets: streets };
+}
+
+function draw(map, images) {
+	const elementMap = document.getElementById('svg');
+	elementMap.innerHTML = '';
+	elementMap.setAttribute('width', WIDTH);
+	elementMap.setAttribute('height', HEIGHT);
+
+	const isDrawGrid = document.getElementById('draw-grid').checked;
+	const isDrawBiomes = document.getElementById('draw-biomes').checked;
+
+	// grid
+	if (isDrawGrid) {
+		elementMap.appendChild(svgutil.createGrid(WIDTH, HEIGHT, GRID_SIZE));
 	}
 
 	// biomes
@@ -186,53 +193,57 @@ async function main() {
 		'grass': '#9f9',
 		'mountain': '#999',
 	};
-	const SHOW_BIOMES = true;
-	if (SHOW_BIOMES) {
-		gridForEach(g, 0, (grid, tile) => {
-			const p = grid.data[tile.y][tile.x];
-			map.appendChild(svgutil.createCircle(p, BIOMES_COLORS[p.biome]));
+	if (isDrawBiomes) {
+		gridForEach(map.grid, 0, (tile) => {
+			const p = map.grid.data[tile.y][tile.x];
+			elementMap.appendChild(svgutil.createCircle(p, BIOMES_COLORS[p.biome]));
 		});
+	}
+
+	// streets
+	const SHOW_STREETS = true;
+	if (SHOW_STREETS) {
+		for (const street of map.streets) {
+			elementMap.appendChild(svgutil.createLine(street.from, street.to, '#999'));
+		}
 	}
 
 	// mountains
 	const items = [];
-	gridForEach(g, 0, (grid, tile) => {
-		const p = grid.data[tile.y][tile.x];
+	gridForEach(map.grid, 0, (tile) => {
+		const p = map.grid.data[tile.y][tile.x];
 		if (p.biome === 'mountain') {
-			// TODO maybe do not use the same random number for everything
-			const m = mountains[Math.floor(p.random * mountains.length)];
+			// currently using the same random number for everything
+			const m = images.mountains[Math.floor(p.random * images.mountains.length)];
 			const node = m.cloneNode(true);
 			const xScale = 1.1 + (p.random * 0.2);
 			const yScale = 1.3 + (p.random * 0.2);
 			const x = p.x;
 			const y = p.y;
-			items.push({ x: x, y: y, xs: xScale, ys: yScale, node });
+			items.push({ x: x, y: y, xs: xScale, ys: yScale, node: node });
 		}
 	});
 
-	const SHOW_ITEMS = true;
 	items.sort((a, b) => {
 		return (a.y > b.y) ? 1 : -1;
 	});
-	if (SHOW_ITEMS) {
-		for (const item of items) {
-			const node = item.node;
-			node.setAttribute('transform', 'translate(' + item.x + ' ' + item.y + ') scale(' + item.xs + ' ' + item.ys + ')');
-			map.appendChild(node);
-		}
+	for (const item of items) {
+		const node = item.node;
+		node.setAttribute('transform', 'translate(' + item.x + ' ' + item.y + ') scale(' + item.xs + ' ' + item.ys + ')');
+		elementMap.appendChild(node);
 	}
 
 	// draw coast
-	gridForEach(g, 1, (grid, tile) => {
-		const p = grid.data[tile.y][tile.x];
-		const pl = grid.data[tile.y + 0][tile.x - 1];
-		const pr = grid.data[tile.y + 0][tile.x + 1];
-		const pt = grid.data[tile.y - 1][tile.x - 0];
-		const pb = grid.data[tile.y + 1][tile.x + 0];
-		const ptl = grid.data[tile.y - 1][tile.x - 1];
-		const ptr = grid.data[tile.y - 1][tile.x + 1];
-		const pbl = grid.data[tile.y + 1][tile.x - 1];
-		const pbr = grid.data[tile.y + 1][tile.x + 1];
+	gridForEach(map.grid, 1, (tile) => {
+		const p = map.grid.data[tile.y][tile.x];
+		const pl = map.grid.data[tile.y + 0][tile.x - 1];
+		const pr = map.grid.data[tile.y + 0][tile.x + 1];
+		const pt = map.grid.data[tile.y - 1][tile.x - 0];
+		const pb = map.grid.data[tile.y + 1][tile.x + 0];
+		const ptl = map.grid.data[tile.y - 1][tile.x - 1];
+		const ptr = map.grid.data[tile.y - 1][tile.x + 1];
+		const pbl = map.grid.data[tile.y + 1][tile.x - 1];
+		const pbr = map.grid.data[tile.y + 1][tile.x + 1];
 		let ps = [];
 
 		// tr
@@ -289,13 +300,37 @@ async function main() {
 		}
 
 		if (ps.length == 2) {
-			map.appendChild(svgutil.createQuadraticBezier(middle(p, ps[0]), p, middle(p, ps[1]), '#00f'));
+			elementMap.appendChild(svgutil.createQuadraticBezier(middle(p, ps[0]), p, middle(p, ps[1]), '#00f'));
 		} else if (ps.length == 4) {
 			// other combinations 0213 may also work
-			map.appendChild(svgutil.createQuadraticBezier(middle(p, ps[0]), p, middle(p, ps[1]), '#00f'));
-			map.appendChild(svgutil.createQuadraticBezier(middle(p, ps[2]), p, middle(p, ps[3]), '#00f'));
+			elementMap.appendChild(svgutil.createQuadraticBezier(middle(p, ps[0]), p, middle(p, ps[1]), '#00f'));
+			elementMap.appendChild(svgutil.createQuadraticBezier(middle(p, ps[2]), p, middle(p, ps[3]), '#00f'));
 		}
 	});
+}
+
+async function main() {
+	const mountains = await Promise.all(['mountain1.svg', 'mountain2.svg', 'mountain3.svg'].map($ => svgutil.load($)));
+	const images = { mountains: mountains };
+
+	let map = null;
+
+	function clickCreate() {
+		const seed = parseFloat(document.getElementById('seed').value);
+		map = create(seed);
+		draw(map, images);
+	}
+
+	function clickDraw() {
+		draw(map, images);
+	}
+
+	document.getElementById('create').addEventListener('click', clickCreate);
+	document.getElementById('draw-grid').addEventListener('change', clickDraw);
+	document.getElementById('draw-biomes').addEventListener('change', clickDraw);
+
+	clickCreate();
+	clickDraw();
 }
 
 document.addEventListener('DOMContentLoaded', main);

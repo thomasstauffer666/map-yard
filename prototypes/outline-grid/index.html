@@ -9,10 +9,22 @@
 		svg {
 			border: 1px dashed black;
 		}
+
+		body {
+			font-family: 'Ubuntu', sans-serif;
+		}
 	</style>
 	<script type="module" src="main.js"></script>
 <body>
-	<object id="mountain1" type="image/svg+xml" data="mountain1.svg" style="display:none"></object>
+	<div>
+		<span>Seed</span>
+		<input id="seed" type="text" value="1.23">
+		<button id="create">Create</button>
+		<span>Draw Grid</span>
+		<input id="draw-grid" type="checkbox">
+		<span>Draw Biomes</span>
+		<input id="draw-biomes" type="checkbox">
+	</div>
 	<svg id="svg"></svg>
 </body>
 
