@@ -144,32 +144,15 @@ function create(seed) {
 		return 'water';
 	}
 
-	const towns = [];
 	// assign level & biomes
 	gridForEach(g, 0, (tile) => {
 		const p = g.data[tile.y][tile.x];
 		let noise = perlinNoise(perlin, { x: p.x / 200, y: p.y / 200 });
 		p.level = noise + 1.0; // 0 .. 2
 		p.biome = selectBiome(p);
-		if (p.biome === 'town') {
-			towns.push({ x: p.x, y: p.y });
-		}
 	});
 
-	// streets
-	const streets = [];
-	for (const from of towns) {
-		const toList = towns.
-			filter(to => (from.x != to.x) || (from.y != to.y)).
-			map(to => ({ x: to.x, y: to.y, distance: distance(from, to) }));
-		// only search the closest town
-		if (toList.length > 0) {
-			toList.sort((a, b) => a.distance > b.distance ? 1 : -1);
-			streets.push({ from: from, to: toList[0] });
-		}
-	}
-
-	return { grid: g, streets: streets };
+	return { grid: g };
 }
 
 function draw(map, images) {
@@ -200,10 +183,30 @@ function draw(map, images) {
 		});
 	}
 
+	// towns
+	const towns = [];
+	gridForEach(map.grid, 0, (tile) => {
+		const d = map.grid.data[tile.y][tile.x];
+		if (d.biome === 'town') {
+			towns.push({ x: d.x, y: d.y });
+		}
+	});
+
 	// streets
+	const streets = [];
+	for (const from of towns) {
+		const toList = towns.
+			filter(to => (from.x != to.x) || (from.y != to.y)).
+			map(to => ({ x: to.x, y: to.y, distance: distance(from, to) }));
+		// only search the closest town
+		if (toList.length > 0) {
+			toList.sort((a, b) => a.distance > b.distance ? 1 : -1);
+			streets.push({ from: from, to: toList[0] });
+		}
+	}
 	const SHOW_STREETS = true;
 	if (SHOW_STREETS) {
-		for (const street of map.streets) {
+		for (const street of streets) {
 			elementMap.appendChild(svgutil.createLine(street.from, street.to, '#999'));
 		}
 	}
@@ -325,12 +328,19 @@ async function main() {
 		draw(map, images);
 	}
 
+	function clickMap(event) {
+		const x = Math.floor(event.offsetX / GRID_SIZE);
+		const y = Math.floor(event.offsetY / GRID_SIZE);
+		map.grid.data[y][x].biome = 'water';
+		draw(map, images);
+	}
+
 	document.getElementById('create').addEventListener('click', clickCreate);
 	document.getElementById('draw-grid').addEventListener('change', clickDraw);
 	document.getElementById('draw-biomes').addEventListener('change', clickDraw);
+	document.getElementById('svg').addEventListener('click', clickMap);
 
 	clickCreate();
-	clickDraw();
 }
 
 document.addEventListener('DOMContentLoaded', main);
