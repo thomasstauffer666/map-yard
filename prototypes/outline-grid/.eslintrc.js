@@ -16,5 +16,5 @@ module.exports = {
 		'keyword-spacing': ['error', { 'before': true, 'after': true }],
 		'no-unused-vars': ['error', { 'varsIgnorePattern': '^_', 'argsIgnorePattern': '^_' }],
 		'no-console': ['off'],
-	}
+	},
 };

@@ -1,6 +1,5 @@
-
-import * as xxhash from './xxhash.js';
 import * as svgutil from './svgutil.js';
+import * as xxhash from './xxhash.js';
 
 const UINT32_MAX = 0xffffffff;
 
@@ -62,7 +61,7 @@ function rnhUnitVector(seeds) {
 }
 
 function rnhNorm(seeds) {
-	//const result = Math.random();
+	// const result = Math.random();
 	const result = xxhash.xxHash32(float2uint32(seeds), 0) / UINT32_MAX;
 	console.assert((result >= 0.0) && (result <= 1.0));
 	return result;
@@ -115,7 +114,7 @@ const GRID_SIZE = 25;
 
 function create(seed) {
 	// this would is the only user controlled number
-	//const seed = 0.3; // Math.random();
+	// const seed = 0.3; // Math.random();
 
 	const seedRandom = 0.7;
 	const seedX = 0.9;
@@ -133,7 +132,7 @@ function create(seed) {
 		return {
 			random: rnhNorm([seed, seedRandom, p.x, p.y]), // used in many places
 			x: (rnhMinMax([seed, seedX, p.x, p.y], gridBorderMin, gridBorderMax) + p.x) * GRID_SIZE,
-			y: (rnhMinMax([seed, seedY, p.x, p.y], gridBorderMin, gridBorderMax) + p.y) * GRID_SIZE
+			y: (rnhMinMax([seed, seedY, p.x, p.y], gridBorderMin, gridBorderMax) + p.y) * GRID_SIZE,
 		};
 	});
 
@@ -195,9 +194,9 @@ function draw(map, images) {
 	// streets
 	const streets = [];
 	for (const from of towns) {
-		const toList = towns.
-			filter(to => (from.x != to.x) || (from.y != to.y)).
-			map(to => ({ x: to.x, y: to.y, distance: distance(from, to) }));
+		const toList = towns
+			.filter(to => (from.x != to.x) || (from.y != to.y))
+			.map(to => ({ x: to.x, y: to.y, distance: distance(from, to) }));
 		// only search the closest town
 		if (toList.length > 0) {
 			toList.sort((a, b) => a.distance > b.distance ? 1 : -1);
