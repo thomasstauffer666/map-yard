@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="210mm"
+   height="297mm"
+   viewBox="0 0 210 297"
+   version="1.1"
+   id="svg530"
+   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   sodipodi:docname="tree1.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview532"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="mm"
+     showgrid="false"
+     inkscape:zoom="2.9576318"
+     inkscape:cx="85.541412"
+     inkscape:cy="-73.031403"
+     inkscape:window-width="1920"
+     inkscape:window-height="1008"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs527" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <path
+       d="M -1.2388004,1.3404235 H 1.215346 c 0,0 -0.74410895,-0.87963619 -0.50146466,-5.1368057 l -1.54715909,0.141477 c 0,0 0.2852232,2.90602266 -0.40552265,4.9953287"
+       style="fill:#ffffff;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:0.5;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="path20" />
+    <path
+       d="m -4.9083991,-7.0446358 c 0.089062,1.1117014 0.4495891,3.4321609 4.28987545,3.9154413 3.84047255,0.4833546 5.29094595,-1.2084241 5.41273265,-3.383855 0.1219733,-2.175245 -0.5278677,-8.6528225 -1.524661,-12.4233835 -0.9967938,-3.770562 -2.80574825,-8.846195 -3.28676025,-8.942881 -0.481012,-0.09669 -2.45489005,6.67095 -3.48273475,10.779912 -1.0274728,4.108775 -1.4977006,8.9428793 -1.4084521,10.0547662"
+       style="fill:#ffffff;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:0.5;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="path22" />
+  </g>
+</svg>

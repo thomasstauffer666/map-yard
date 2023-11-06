@@ -48,14 +48,14 @@ export function createRosePeak(strokeColor) {
 export function createRose(center) {
 	const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
 	const strokeColor = '#ccc';
-	group.appendChild(createCircle({x:0,y:0}, 40, strokeColor, '#fff'));
-	for(let angle = 0; angle < 360; angle += 22.5) {
+	group.appendChild(createCircle({ x: 0, y: 0 }, 40, strokeColor, '#fff'));
+	for (let angle = 0; angle < 360; angle += 22.5) {
 		const peak = createRosePeak(strokeColor);
-		peak.setAttribute('transform', `rotate(${angle} 0 0)`)
+		peak.setAttribute('transform', `rotate(${angle} 0 0)`);
 		group.appendChild(peak);
 	}
-	group.appendChild(createCircle({x:0,y:0}, 20, strokeColor, '#fff'));
-	group.setAttribute('transform', `translate(${center.x} ${center.y})`)
+	group.appendChild(createCircle({ x: 0, y: 0 }, 20, strokeColor, '#fff'));
+	group.setAttribute('transform', `translate(${center.x} ${center.y})`);
 	return group;
 }
 

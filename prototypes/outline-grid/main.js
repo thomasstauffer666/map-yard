@@ -130,6 +130,7 @@ function create(seed, options) {
 
 	function selectBiome(p) {
 		if (p.level > 1.4) return 'mountain';
+		if ((p.level > 1.1) && (p.level < 1.2)) return 'tree';
 		if (p.level > 1.0 && p.random < 0.02) return 'town';
 		if (p.level > 0.8) return 'grass';
 		return 'water';
@@ -175,6 +176,7 @@ function draw(map, images, options) {
 	const BIOMES_COLORS = {
 		'town': '#f0f',
 		'water': '#00f',
+		'tree': '#393',
 		'grass': '#9f9',
 		'mountain': '#999',
 	};
@@ -219,10 +221,19 @@ function draw(map, images, options) {
 		const p = map.grid.data[tileCoord.y][tileCoord.x];
 		if (p.biome === 'mountain') {
 			// currently using the same random number for everything
-			const m = images.mountains[Math.floor(p.random * images.mountains.length)];
-			const node = m.cloneNode(true);
+			const node = images.mountains[Math.floor(p.random * images.mountains.length)].cloneNode(true);
 			const xScale = 1.1 + (p.random * 0.2);
 			const yScale = 1.3 + (p.random * 0.2);
+			const x = p.x;
+			const y = p.y;
+			items.push({ x: x, y: y, xs: xScale, ys: yScale, node: node });
+		}
+		if (p.biome === 'tree') {
+			//const i = Math.floor(p.random * images.trees.length);
+			const i = 1;
+			const node = images.trees[i].cloneNode(true);
+			const xScale = 0.8 + (p.random * 0.4);
+			const yScale = 0.8 + (p.random * 0.4);
 			const x = p.x;
 			const y = p.y;
 			items.push({ x: x, y: y, xs: xScale, ys: yScale, node: node });
@@ -320,7 +331,8 @@ function draw(map, images, options) {
 
 async function main() {
 	const mountains = await Promise.all(['mountain1.svg', 'mountain2.svg', 'mountain3.svg'].map($ => svgutil.load($)));
-	const images = { mountains: mountains };
+	const trees = await Promise.all(['tree1.svg', 'tree2.svg'].map($ => svgutil.load($)));
+	const images = { mountains, trees };
 	const options = {
 		width: 1000,
 		height: 700,
