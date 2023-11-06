@@ -32,13 +32,12 @@ function lerp(a, b, x) {
 }
 */
 
-function gridMake(width, height, callable) {
+function gridMake(width, height) {
 	const data = [];
 	for (let y = 0; y < height; y += 1) {
 		const row = [];
 		for (let x = 0; x < width; x += 1) {
-			const v = callable({ x: x, y: y });
-			row.push(v);
+			row.push({});
 		}
 		data.push(row);
 	}
@@ -75,7 +74,11 @@ function rnhMinMax(seeds, min, max) {
 // Perlin
 
 function perlinCreate(seed, width, height) {
-	return gridMake(width, height, p => rnhUnitVector([seed, p.x, p.y]));
+	const grid = gridMake(width, height);
+	gridForEach(grid, 0, (tileCoord) => {
+		grid.data[tileCoord.y][tileCoord.x] = rnhUnitVector([seed, tileCoord.x, tileCoord.y]);
+	});
+	return grid;
 }
 
 function perlinNoise(perlin, coord) {
@@ -107,12 +110,7 @@ function isUint32(x) {
 }
 */
 
-// TODO remove
-const WIDTH = 1000;
-const HEIGHT = 700;
-const GRID_SIZE = 25;
-
-function create(seed) {
+function create(seed, options) {
 	// this would is the only user controlled number
 	// const seed = 0.3; // Math.random();
 
@@ -125,17 +123,10 @@ function create(seed) {
 	const gridBorderMin = 0.2;
 	const gridBorderMax = 0.8;
 
-	const w = Math.floor(WIDTH / GRID_SIZE);
-	const h = Math.floor(HEIGHT / GRID_SIZE);
+	const w = Math.floor(options.width / options.gridSize);
+	const h = Math.floor(options.height / options.gridSize);
 	// TOOD use gridForEach for init?
-	const g = gridMake(w, h, (p) => {
-		return {
-			// TODO use x, y to store tile coordinates, then gridForEach could use a tile a first param
-			random: rnhNorm([seed, seedRandom, p.x, p.y]), // used in many places
-			x: (rnhMinMax([seed, seedX, p.x, p.y], gridBorderMin, gridBorderMax) + p.x) * GRID_SIZE,
-			y: (rnhMinMax([seed, seedY, p.x, p.y], gridBorderMin, gridBorderMax) + p.y) * GRID_SIZE,
-		};
-	});
+	const g = gridMake(w, h);
 
 	function selectBiome(p) {
 		if (p.level > 1.4) return 'mountain';
@@ -145,8 +136,13 @@ function create(seed) {
 	}
 
 	// assign level & biomes
-	gridForEach(g, 0, (tile) => {
-		const p = g.data[tile.y][tile.x];
+	gridForEach(g, 0, (tileCoord) => {
+		const p = g.data[tileCoord.y][tileCoord.x];
+		p.random = rnhNorm([seed, seedRandom, tileCoord.x, tileCoord.y]); // used in many places
+		const sx = [seed, seedX, tileCoord.x, tileCoord.y];
+		const sy = [seed, seedY, tileCoord.x, tileCoord.y];
+		p.x = (rnhMinMax(sx, gridBorderMin, gridBorderMax) + tileCoord.x) * options.gridSize;
+		p.y = (rnhMinMax(sy, gridBorderMin, gridBorderMax) + tileCoord.y) * options.gridSize;
 		let noise = perlinNoise(perlin, { x: p.x / 200, y: p.y / 200 });
 		p.level = noise + 1.0; // 0 .. 2
 		p.biome = selectBiome(p);
@@ -155,20 +151,24 @@ function create(seed) {
 	return { grid: g };
 }
 
-function draw(map, images) {
+function draw(map, images, options) {
 	const elementMap = document.getElementById('svg');
 	elementMap.innerHTML = '';
-	elementMap.setAttribute('width', WIDTH);
-	elementMap.setAttribute('height', HEIGHT);
+	elementMap.setAttribute('width', options.width);
+	elementMap.setAttribute('height', options.height);
 
 	const isDrawGrid = document.getElementById('draw-grid').checked;
 	const isDrawBiomes = document.getElementById('draw-biomes').checked;
-	//const isDrawRose = document.getElementById('draw-rose').checked;
-	//const isDrawBorder = document.getElementById('draw-border').checked;
+	const isDrawRose = document.getElementById('draw-rose').checked;
+	const isDrawBorder = document.getElementById('draw-border').checked;
 
 	// grid
 	if (isDrawGrid) {
-		elementMap.appendChild(svgutil.createGrid(WIDTH, HEIGHT, GRID_SIZE));
+		elementMap.appendChild(svgutil.createGrid(options.width, options.height, options.gridSize));
+	}
+
+	if (isDrawRose) {
+		elementMap.appendChild(svgutil.createRose({ x: options.width - 200, y: options.height - 200 }));
 	}
 
 	// biomes
@@ -179,16 +179,16 @@ function draw(map, images) {
 		'mountain': '#999',
 	};
 	if (isDrawBiomes) {
-		gridForEach(map.grid, 0, (tile) => {
-			const p = map.grid.data[tile.y][tile.x];
-			elementMap.appendChild(svgutil.createCircle(p, BIOMES_COLORS[p.biome]));
+		gridForEach(map.grid, 0, (tileCoord) => {
+			const p = map.grid.data[tileCoord.y][tileCoord.x];
+			elementMap.appendChild(svgutil.createCircle(p, 2, '', BIOMES_COLORS[p.biome]));
 		});
 	}
 
 	// towns
 	const towns = [];
-	gridForEach(map.grid, 0, (tile) => {
-		const d = map.grid.data[tile.y][tile.x];
+	gridForEach(map.grid, 0, (tileCoord) => {
+		const d = map.grid.data[tileCoord.y][tileCoord.x];
 		if (d.biome === 'town') {
 			towns.push({ x: d.x, y: d.y });
 		}
@@ -209,14 +209,14 @@ function draw(map, images) {
 	const SHOW_STREETS = true;
 	if (SHOW_STREETS) {
 		for (const street of streets) {
-			elementMap.appendChild(svgutil.createLine(street.from, street.to, '#999'));
+			elementMap.appendChild(svgutil.createLine(street.from, street.to, '#f40'));
 		}
 	}
 
 	// mountains
 	const items = [];
-	gridForEach(map.grid, 0, (tile) => {
-		const p = map.grid.data[tile.y][tile.x];
+	gridForEach(map.grid, 0, (tileCoord) => {
+		const p = map.grid.data[tileCoord.y][tileCoord.x];
 		if (p.biome === 'mountain') {
 			// currently using the same random number for everything
 			const m = images.mountains[Math.floor(p.random * images.mountains.length)];
@@ -239,16 +239,16 @@ function draw(map, images) {
 	}
 
 	// draw coast
-	gridForEach(map.grid, 1, (tile) => {
-		const p = map.grid.data[tile.y][tile.x];
-		const pl = map.grid.data[tile.y + 0][tile.x - 1];
-		const pr = map.grid.data[tile.y + 0][tile.x + 1];
-		const pt = map.grid.data[tile.y - 1][tile.x - 0];
-		const pb = map.grid.data[tile.y + 1][tile.x + 0];
-		const ptl = map.grid.data[tile.y - 1][tile.x - 1];
-		const ptr = map.grid.data[tile.y - 1][tile.x + 1];
-		const pbl = map.grid.data[tile.y + 1][tile.x - 1];
-		const pbr = map.grid.data[tile.y + 1][tile.x + 1];
+	gridForEach(map.grid, 1, (tileCoord) => {
+		const p = map.grid.data[tileCoord.y][tileCoord.x];
+		const pl = map.grid.data[tileCoord.y + 0][tileCoord.x - 1];
+		const pr = map.grid.data[tileCoord.y + 0][tileCoord.x + 1];
+		const pt = map.grid.data[tileCoord.y - 1][tileCoord.x - 0];
+		const pb = map.grid.data[tileCoord.y + 1][tileCoord.x + 0];
+		const ptl = map.grid.data[tileCoord.y - 1][tileCoord.x - 1];
+		const ptr = map.grid.data[tileCoord.y - 1][tileCoord.x + 1];
+		const pbl = map.grid.data[tileCoord.y + 1][tileCoord.x - 1];
+		const pbr = map.grid.data[tileCoord.y + 1][tileCoord.x + 1];
 		let ps = [];
 
 		// tr
@@ -312,24 +312,33 @@ function draw(map, images) {
 			elementMap.appendChild(svgutil.createQuadraticBezier(middle(p, ps[1]), p, middle(p, ps[3]), '#00f'));
 		}
 	});
+
+	if (isDrawBorder) {
+		elementMap.appendChild(svgutil.createBorder(options.width, options.height, options.gridSize));
+	}
 }
 
 async function main() {
 	const mountains = await Promise.all(['mountain1.svg', 'mountain2.svg', 'mountain3.svg'].map($ => svgutil.load($)));
 	const images = { mountains: mountains };
+	const options = {
+		width: 1000,
+		height: 700,
+		gridSize: 25,
+	};
 
 	let map = null;
 
 	function clickCreate() {
 		const seed = parseFloat(document.getElementById('seed').value);
-		map = create(seed);
-		map.grid.data[17][35].biome = 'water';
-		map.grid.data[17][36].biome = 'water';
-		draw(map, images);
+		map = create(seed, options);
+		// map.grid.data[17][35].biome = 'water';
+		// map.grid.data[17][36].biome = 'water';
+		draw(map, images, options);
 	}
 
 	function clickDraw() {
-		draw(map, images);
+		draw(map, images, options);
 	}
 
 	function clickMap(event) {
@@ -337,12 +346,14 @@ async function main() {
 		const y = Math.floor(event.offsetY / GRID_SIZE);
 		console.log(x, y);
 		map.grid.data[y][x].biome = 'water';
-		draw(map, images);
+		draw(map, images, options);
 	}
 
 	document.getElementById('create').addEventListener('click', clickCreate);
 	document.getElementById('draw-grid').addEventListener('change', clickDraw);
 	document.getElementById('draw-biomes').addEventListener('change', clickDraw);
+	document.getElementById('draw-rose').addEventListener('change', clickDraw);
+	document.getElementById('draw-border').addEventListener('change', clickDraw);
 	document.getElementById('svg').addEventListener('click', clickMap);
 
 	clickCreate();
