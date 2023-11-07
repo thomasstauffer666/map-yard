@@ -114,9 +114,11 @@ function create(seed, options) {
 	// this would is the only user controlled number
 	// const seed = 0.3; // Math.random();
 
-	const seedRandom = 0.7;
-	const seedX = 0.9;
-	const seedY = 0.8;
+	const seeds = {
+		random: 0.7,
+		x: 0.9,
+		y: 0.8,
+	};
 
 	const perlin = perlinCreate(seed, 10 + 2, 8 + 2);
 
@@ -139,11 +141,12 @@ function create(seed, options) {
 	// assign level & biomes
 	gridForEach(g, 0, (tileCoord) => {
 		const p = g.data[tileCoord.y][tileCoord.x];
-		p.random = rnhNorm([seed, seedRandom, tileCoord.x, tileCoord.y]); // used in many places
-		const sx = [seed, seedX, tileCoord.x, tileCoord.y];
-		const sy = [seed, seedY, tileCoord.x, tileCoord.y];
-		p.x = (rnhMinMax(sx, gridBorderMin, gridBorderMax) + tileCoord.x) * options.gridSize;
-		p.y = (rnhMinMax(sy, gridBorderMin, gridBorderMax) + tileCoord.y) * options.gridSize;
+		// currently using the same random number for many things (e.g. selected object, size of objects)
+		p.random = rnhNorm([seed, seeds.random, tileCoord.x, tileCoord.y]);
+		const seedX = [seed, seeds.x, tileCoord.x, tileCoord.y];
+		const seedY = [seed, seeds.y, tileCoord.x, tileCoord.y];
+		p.x = (rnhMinMax(seedX, gridBorderMin, gridBorderMax) + tileCoord.x) * options.gridSize;
+		p.y = (rnhMinMax(seedY, gridBorderMin, gridBorderMax) + tileCoord.y) * options.gridSize;
 		let noise = perlinNoise(perlin, { x: p.x / 200, y: p.y / 200 });
 		p.level = noise + 1.0; // 0 .. 2
 		p.biome = selectBiome(p);
@@ -220,23 +223,22 @@ function draw(map, images, options) {
 	gridForEach(map.grid, 0, (tileCoord) => {
 		const p = map.grid.data[tileCoord.y][tileCoord.x];
 		if (p.biome === 'mountain') {
-			// currently using the same random number for everything
 			const node = images.mountains[Math.floor(p.random * images.mountains.length)].cloneNode(true);
 			const xScale = 1.1 + (p.random * 0.2);
 			const yScale = 1.3 + (p.random * 0.2);
-			const x = p.x;
-			const y = p.y;
-			items.push({ x: x, y: y, xs: xScale, ys: yScale, node: node });
-		}
-		if (p.biome === 'tree') {
-			//const i = Math.floor(p.random * images.trees.length);
+			items.push({ x: p.x, y: p.y, xs: xScale, ys: yScale, node: node });
+		} else if (p.biome === 'tree') {
+			// const i = Math.floor(p.random * images.trees.length);
 			const i = 1;
 			const node = images.trees[i].cloneNode(true);
 			const xScale = 0.8 + (p.random * 0.4);
 			const yScale = 0.8 + (p.random * 0.4);
-			const x = p.x;
-			const y = p.y;
-			items.push({ x: x, y: y, xs: xScale, ys: yScale, node: node });
+			items.push({ x: p.x, y: p.y, xs: xScale, ys: yScale, node: node });
+		} else if (p.biome === 'town') {
+			const node = images.towns[0].cloneNode(true);
+			const xScale = 1.0;
+			const yScale = 1.0;
+			items.push({ x: p.x, y: p.y, xs: xScale, ys: yScale, node: node });
 		}
 	});
 
@@ -332,7 +334,8 @@ function draw(map, images, options) {
 async function main() {
 	const mountains = await Promise.all(['mountain1.svg', 'mountain2.svg', 'mountain3.svg'].map($ => svgutil.load($)));
 	const trees = await Promise.all(['tree1.svg', 'tree2.svg'].map($ => svgutil.load($)));
-	const images = { mountains, trees };
+	const towns = await Promise.all(['town1.svg'].map($ => svgutil.load($)));
+	const images = { mountains, trees, towns };
 	const options = {
 		width: 1000,
 		height: 700,
