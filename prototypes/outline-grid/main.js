@@ -219,15 +219,21 @@ function draw(map, images, options) {
   // streets
   const streets = [];
   for (const from of towns) {
-    const toList =
-        towns.filter(to => (from.x != to.x) || (from.y != to.y))
-            .map(to => ({x: to.x, y: to.y, distance: distance(from, to)}));
+    const toList = towns.filter(to => (from.x != to.x) || (from.y != to.y))
+                       .map(to => ({
+                              x: to.x,
+                              y: to.y,
+                              distance: distance(from, to),
+                              x_tile: to.x_tile,
+                              y_tile: to.y_tile
+                            }));
     // only search the closest town
     if (toList.length > 0) {
       toList.sort((a, b) => a.distance > b.distance ? 1 : -1);
       streets.push({from: from, to: toList[0]});
     }
   }
+  //   console.log(streets);
   const SHOW_STREETS_zigzag = false;
   if (SHOW_STREETS_zigzag) {
     for (const street of streets) {
@@ -249,9 +255,51 @@ function draw(map, images, options) {
   const SHOW_STREETS_natural = true;
   if (SHOW_STREETS_natural) {
     for (const street of streets) {
-      const p_from = street.from;
-      const p_to = street.to;
-      elementMap.appendChild(svgutil.createLine(p_from, p_to, '#00f'));
+      let p_start = street.from;
+      let p_end = street.to;
+
+      for (let i = 0; i <= 10; i++) {
+        const delta_x = street.to.x_tile - p_start.x_tile;
+        const delta_y = street.to.y_tile - p_start.y_tile;
+
+        p_end = {...p_start};
+
+        // console.log('start', p_start, p_end, delta_x, delta_y);
+
+        if (Math.abs(delta_x) > Math.abs(delta_y)) {
+          p_end.x_tile += Math.sign(delta_x);
+
+          if (p_end.x_tile < 0) {
+            p_end.x_tile = 0
+          }
+          if (p_end.x_tile > options.width) {
+            p_end.x_tile = options.width
+          }
+
+        } else {
+          console.log('hallo');
+          p_end.y_tile += Math.sign(delta_y);
+          if (p_end.y_tile < 0) {
+            p_end.y_tile = 0
+          }
+          if (p_end.y_tile > options.width) {
+            p_end.y_tile = options.width
+          }
+        }
+        console.log(
+            delta_x, delta_y, Math.sign(delta_x), Math.sign(delta_y), p_start,
+            p_end);
+        // console.log(map.grid.data[p_end.y_tile][p_end.x_tile]);
+        p_end.x = map.grid.data[p_end.y_tile][p_end.x_tile].x;
+        p_end.y = map.grid.data[p_end.y_tile][p_end.x_tile].y;
+        elementMap.appendChild(svgutil.createLine(p_start, p_end, '#00f'));
+        p_start = p_end;
+      }
+
+      const p_from = map.grid.data[street.from.y_tile][street.from.x_tile];
+      const p_to = map.grid.data[street.from.y_tile][street.from.x_tile + 1];
+
+      //   elementMap.appendChild(svgutil.createLine(p_from, p_to, '#00f'));
     }
   }
 
