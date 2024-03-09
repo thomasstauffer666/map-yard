@@ -7,13 +7,14 @@ export function createCircle(center, radius, strokeColor, fillColor) {
 	return circle;
 }
 
-export function createLine(start, end, color) {
+export function createLine(start, end, color, thickness) {
 	const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
 	line.setAttribute('x1', start.x);
 	line.setAttribute('y1', start.y);
 	line.setAttribute('x2', end.x);
 	line.setAttribute('y2', end.y);
 	line.setAttribute('style', 'stroke:' + color);
+	line.setAttribute('stroke-width', thickness);
 	return line;
 }
 

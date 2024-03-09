@@ -292,7 +292,7 @@ function draw(map, images, options) {
         // console.log(map.grid.data[p_end.y_tile][p_end.x_tile]);
         p_end.x = map.grid.data[p_end.y_tile][p_end.x_tile].x;
         p_end.y = map.grid.data[p_end.y_tile][p_end.x_tile].y;
-        elementMap.appendChild(svgutil.createLine(p_start, p_end, '#00f'));
+        elementMap.appendChild(svgutil.createLine(p_start, p_end, 'rgb(204, 153, 0)',5));
         p_start = p_end;
       }
 
@@ -322,8 +322,8 @@ function draw(map, images, options) {
 	  const treeToModify= images.trees[i]
 	  const leaves =  treeToModify.querySelector('#layer1 #path58');
 	  const stroke =  treeToModify.querySelector('#layer1 #path48');
-	  const randomGreen =Math.random()*50
-	  const randomRed =Math.random()*30
+	  const randomGreen =p.random*40
+	  const randomRed =p.random*30
 	  leaves.style.fill=`rgb(20,${randomGreen+80},20)`
 	  leaves.style.stroke=`rgb(20,${randomGreen+40},20)`
 	  stroke.style.fill=`rgb(${randomRed +50}, 50, 10)`
