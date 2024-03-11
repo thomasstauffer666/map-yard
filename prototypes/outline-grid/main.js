@@ -165,6 +165,7 @@ function draw(map, images, options) {
 	const isDrawBiomes = document.getElementById('draw-biomes').checked;
 	const isDrawRose = document.getElementById('draw-rose').checked;
 	const isDrawBorder = document.getElementById('draw-border').checked;
+	const isDrawColors = document.getElementById('draw-colors').checked;
 
 	// grid
 	if (isDrawGrid) {
@@ -218,7 +219,7 @@ function draw(map, images, options) {
 		}
 	}
 
-	// mountains
+	// grid elements
 	const items = [];
 	gridForEach(map.grid, 0, (tileCoord) => {
 		const p = map.grid.data[tileCoord.y][tileCoord.x];
@@ -231,6 +232,17 @@ function draw(map, images, options) {
 			// const i = Math.floor(p.random * images.trees.length);
 			const i = 1;
 			const node = images.trees[i].cloneNode(true);
+			if (isDrawColors) {
+				const treeToModify = node;
+				const leaves = treeToModify.querySelector('#layer1 #path58');
+				const stroke = treeToModify.querySelector('#layer1 #path48');
+				const colorLeaves = svgutil.hsl(100 + 20 * p.random, 75, 20 + 10 * p.random);
+				const colorTrunk = svgutil.hsl(40 + 20 * p.random, 75, 10 + 10 * p.random);
+				leaves.style.fill = colorLeaves;
+				leaves.style.stroke = colorLeaves;
+				stroke.style.fill = colorTrunk;
+				stroke.style.stroke = colorTrunk;
+			}
 			const xScale = 0.8 + (p.random * 0.4);
 			const yScale = 0.8 + (p.random * 0.4);
 			items.push({ x: p.x, y: p.y, xs: xScale, ys: yScale, node: node });
@@ -370,6 +382,7 @@ async function main() {
 	document.getElementById('draw-biomes').addEventListener('change', clickDraw);
 	document.getElementById('draw-rose').addEventListener('change', clickDraw);
 	document.getElementById('draw-border').addEventListener('change', clickDraw);
+	document.getElementById('draw-colors').addEventListener('change', clickDraw);
 	document.getElementById('svg').addEventListener('click', clickMap);
 
 	clickCreate();
