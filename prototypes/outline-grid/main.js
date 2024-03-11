@@ -4,500 +4,374 @@ import * as xxhash from './xxhash.js';
 const UINT32_MAX = 0xffffffff;
 
 function middle(a, b) {
-  return {x: (a.x + b.x) / 2, y: (a.y + b.y) / 2};
+	return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
 }
 
 function distance(a, b) {
-  const dx = a.x - b.x;
-  const dy = a.y - b.y;
-  return Math.sqrt(dx ** 2 + dy ** 2);
+	const dx = a.x - b.x;
+	const dy = a.y - b.y;
+	return Math.sqrt(dx ** 2 + dy ** 2);
 }
 
 function float2uint32(floats) {
-  const float32Array = new Float32Array(floats);
-  const uint32Array = new Uint32Array(float32Array.buffer);
-  return Array.from(uint32Array);
+	const float32Array = new Float32Array(floats);
+	const uint32Array = new Uint32Array(float32Array.buffer);
+	return Array.from(uint32Array);
 }
 
 // https://en.wikipedia.org/wiki/Smoothstep
 // 0 <= x <= 1
 function smootherstep(x) {
-  return 6 * (x ** 5) - 15 * (x ** 4) + 10 * (x ** 3);
+	return 6 * (x ** 5) - 15 * (x ** 4) + 10 * (x ** 3);
 }
 
 // https://en.wikipedia.org/wiki/Linear_interpolation
 /*
 function lerp(a, b, x) {
-        return a + x * (b - a);
+	return a + x * (b - a);
 }
 */
 
 function gridMake(width, height) {
-  const data = [];
-  for (let y = 0; y < height; y += 1) {
-    const row = [];
-    for (let x = 0; x < width; x += 1) {
-      row.push({});
-    }
-    data.push(row);
-  }
-  return {width: width, height: height, data: data};
+	const data = [];
+	for (let y = 0; y < height; y += 1) {
+		const row = [];
+		for (let x = 0; x < width; x += 1) {
+			row.push({});
+		}
+		data.push(row);
+	}
+	return { width: width, height: height, data: data };
 }
 
 function gridForEach(grid, border, callable) {
-  for (let y = border; y < (grid.height - border); y += 1) {
-    for (let x = border; x < (grid.width - border); x += 1) {
-      callable({x: x, y: y});
-    }
-  }
+	for (let y = border; y < (grid.height - border); y += 1) {
+		for (let x = border; x < (grid.width - border); x += 1) {
+			callable({ x: x, y: y });
+		}
+	}
 }
 
 // rnh = Random Number Hash
 
 function rnhUnitVector(seeds) {
-  const angle = rnhNorm(seeds) * 2 * Math.PI;
-  return {x: Math.cos(angle), y: Math.sin(angle)};
+	const angle = rnhNorm(seeds) * 2 * Math.PI;
+	return { x: Math.cos(angle), y: Math.sin(angle) };
 }
 
 function rnhNorm(seeds) {
-  // const result = Math.random();
-  const result = xxhash.xxHash32(float2uint32(seeds), 0) / UINT32_MAX;
-  console.assert((result >= 0.0) && (result <= 1.0));
-  return result;
+	// const result = Math.random();
+	const result = xxhash.xxHash32(float2uint32(seeds), 0) / UINT32_MAX;
+	console.assert((result >= 0.0) && (result <= 1.0));
+	return result;
 }
 
 function rnhMinMax(seeds, min, max) {
-  const r = rnhNorm(seeds);
-  return min + (r * (max - min));
+	const r = rnhNorm(seeds);
+	return min + (r * (max - min));
 }
 
 // Perlin
 
 function perlinCreate(seed, width, height) {
-  const grid = gridMake(width, height);
-  gridForEach(grid, 0, (tileCoord) => {
-    grid.data[tileCoord.y][tileCoord.x] =
-        rnhUnitVector([seed, tileCoord.x, tileCoord.y]);
-  });
-  return grid;
+	const grid = gridMake(width, height);
+	gridForEach(grid, 0, (tileCoord) => {
+		grid.data[tileCoord.y][tileCoord.x] = rnhUnitVector([seed, tileCoord.x, tileCoord.y]);
+	});
+	return grid;
 }
 
 function perlinNoise(perlin, coord) {
-  function interpolate(a, b, x) {
-    return a + smootherstep(x) * (b - a);
-  }
+	function interpolate(a, b, x) {
+		return a + smootherstep(x) * (b - a);
+	}
 
-  function dot(p, pf) {
-    const gradient = perlin.data[pf.y][pf.x];
-    const v = {x: p.x - pf.x, y: p.y - pf.y};
-    return v.x * gradient.x + v.y * gradient.y;
-  }
+	function dot(p, pf) {
+		const gradient = perlin.data[pf.y][pf.x];
+		const v = { x: p.x - pf.x, y: p.y - pf.y };
+		return v.x * gradient.x + v.y * gradient.y;
+	}
 
-  const xf = Math.floor(coord.x);
-  const yf = Math.floor(coord.y);
-  const tl = dot(coord, {x: xf + 0, y: yf + 0});
-  const tr = dot(coord, {x: xf + 1, y: yf + 0});
-  const bl = dot(coord, {x: xf + 0, y: yf + 1});
-  const br = dot(coord, {x: xf + 1, y: yf + 1});
-  const t = interpolate(tl, tr, coord.x - xf);
-  const b = interpolate(bl, br, coord.x - xf);
-  const v = interpolate(t, b, coord.y - yf);
-  return v;
+	const xf = Math.floor(coord.x);
+	const yf = Math.floor(coord.y);
+	const tl = dot(coord, { x: xf + 0, y: yf + 0 });
+	const tr = dot(coord, { x: xf + 1, y: yf + 0 });
+	const bl = dot(coord, { x: xf + 0, y: yf + 1 });
+	const br = dot(coord, { x: xf + 1, y: yf + 1 });
+	const t = interpolate(tl, tr, coord.x - xf);
+	const b = interpolate(bl, br, coord.x - xf);
+	const v = interpolate(t, b, coord.y - yf);
+	return v;
 }
 
 /*
 function isUint32(x) {
-        return Number.isInteger(x) && (x >= 0) && (x <= UINT32_MAX);
+	return Number.isInteger(x) && (x >= 0) && (x <= UINT32_MAX);
 }
 */
 
 function create(seed, options) {
-  // this would is the only user controlled number
-  // const seed = 0.3; // Math.random();
+	// this would is the only user controlled number
+	// const seed = 0.3; // Math.random();
 
-  const seeds = {
-    random: 0.7,
-    x: 0.9,
-    y: 0.8,
-  };
+	const seeds = {
+		random: 0.7,
+		x: 0.9,
+		y: 0.8,
+	};
 
-  const perlin = perlinCreate(seed, 10 + 2, 8 + 2);
+	const perlin = perlinCreate(seed, 10 + 2, 8 + 2);
 
-  const gridBorderMin = 0.2;
-  const gridBorderMax = 0.8;
+	const gridBorderMin = 0.2;
+	const gridBorderMax = 0.8;
 
-  const w = Math.floor(options.width / options.gridSize);
-  const h = Math.floor(options.height / options.gridSize);
-  // TOOD use gridForEach for init?
-  const g = gridMake(w, h);
+	const w = Math.floor(options.width / options.gridSize);
+	const h = Math.floor(options.height / options.gridSize);
+	// TOOD use gridForEach for init?
+	const g = gridMake(w, h);
 
-  function selectBiome(p) {
-    if (p.level > 1.4) return 'mountain';
-    if ((p.level > 1.1) && (p.level < 1.2)) return 'tree';
-    if (p.level > 1.0 && p.random < 0.02) return 'town';
-    if (p.level > 0.8) return 'grass';
-    return 'water';
-  }
+	function selectBiome(p) {
+		if (p.level > 1.4) return 'mountain';
+		if ((p.level > 1.1) && (p.level < 1.2)) return 'tree';
+		if (p.level > 1.0 && p.random < 0.02) return 'town';
+		if (p.level > 0.8) return 'grass';
+		return 'water';
+	}
 
-  // assign level & biomes
-  gridForEach(g, 0, (tileCoord) => {
-    const p = g.data[tileCoord.y][tileCoord.x];
-    // currently using the same random number for many things (e.g. selected
-    // object, size of objects)
-    p.random = rnhNorm([seed, seeds.random, tileCoord.x, tileCoord.y]);
-    const seedX = [seed, seeds.x, tileCoord.x, tileCoord.y];
-    const seedY = [seed, seeds.y, tileCoord.x, tileCoord.y];
-    p.x = (rnhMinMax(seedX, gridBorderMin, gridBorderMax) + tileCoord.x) *
-        options.gridSize;
-    p.y = (rnhMinMax(seedY, gridBorderMin, gridBorderMax) + tileCoord.y) *
-        options.gridSize;
-    let noise = perlinNoise(perlin, {x: p.x / 200, y: p.y / 200});
-    p.level = noise + 1.0;  // 0 .. 2
-    p.biome = selectBiome(p);
-  });
+	// assign level & biomes
+	gridForEach(g, 0, (tileCoord) => {
+		const p = g.data[tileCoord.y][tileCoord.x];
+		// currently using the same random number for many things (e.g. selected object, size of objects)
+		p.random = rnhNorm([seed, seeds.random, tileCoord.x, tileCoord.y]);
+		const seedX = [seed, seeds.x, tileCoord.x, tileCoord.y];
+		const seedY = [seed, seeds.y, tileCoord.x, tileCoord.y];
+		p.x = (rnhMinMax(seedX, gridBorderMin, gridBorderMax) + tileCoord.x) * options.gridSize;
+		p.y = (rnhMinMax(seedY, gridBorderMin, gridBorderMax) + tileCoord.y) * options.gridSize;
+		let noise = perlinNoise(perlin, { x: p.x / 200, y: p.y / 200 });
+		p.level = noise + 1.0; // 0 .. 2
+		p.biome = selectBiome(p);
+	});
 
-  return {grid: g};
+	return { grid: g };
 }
 
 function draw(map, images, options) {
-  const elementMap = document.getElementById('svg');
-  elementMap.innerHTML = '';
-  elementMap.setAttribute('width', options.width);
-  elementMap.setAttribute('height', options.height);
+	const elementMap = document.getElementById('svg');
+	elementMap.innerHTML = '';
+	elementMap.setAttribute('width', options.width);
+	elementMap.setAttribute('height', options.height);
 
-  const isDrawGrid = document.getElementById('draw-grid').checked;
-  const isDrawBiomes = document.getElementById('draw-biomes').checked;
-  const isDrawRose = document.getElementById('draw-rose').checked;
-  const isDrawBorder = document.getElementById('draw-border').checked;
+	const isDrawGrid = document.getElementById('draw-grid').checked;
+	const isDrawBiomes = document.getElementById('draw-biomes').checked;
+	const isDrawRose = document.getElementById('draw-rose').checked;
+	const isDrawBorder = document.getElementById('draw-border').checked;
 
-  // grid
-  if (isDrawGrid) {
-    elementMap.appendChild(
-        svgutil.createGrid(options.width, options.height, options.gridSize));
-  }
+	// grid
+	if (isDrawGrid) {
+		elementMap.appendChild(svgutil.createGrid(options.width, options.height, options.gridSize));
+	}
 
-  if (isDrawRose) {
-    elementMap.appendChild(
-        svgutil.createRose({x: options.width - 200, y: options.height - 200}));
-  }
+	if (isDrawRose) {
+		elementMap.appendChild(svgutil.createRose({ x: options.width - 200, y: options.height - 200 }));
+	}
 
-  // biomes
-  const BIOMES_COLORS = {
-    'town': '#f0f',
-    'water': '#00f',
-    'tree': '#393',
-    'grass': '#9f9',
-    'mountain': '#999',
-  };
-  if (isDrawBiomes) {
-    gridForEach(map.grid, 0, (tileCoord) => {
-      const p = map.grid.data[tileCoord.y][tileCoord.x];
-      elementMap.appendChild(
-          svgutil.createCircle(p, 2, '', BIOMES_COLORS[p.biome]));
-    });
-  }
+	// biomes
+	const BIOMES_COLORS = {
+		'town': '#f0f',
+		'water': '#00f',
+		'tree': '#393',
+		'grass': '#9f9',
+		'mountain': '#999',
+	};
+	if (isDrawBiomes) {
+		gridForEach(map.grid, 0, (tileCoord) => {
+			const p = map.grid.data[tileCoord.y][tileCoord.x];
+			elementMap.appendChild(svgutil.createCircle(p, 2, '', BIOMES_COLORS[p.biome]));
+		});
+	}
 
-  // towns
-  const towns = [];
-  gridForEach(map.grid, 0, (tileCoord) => {
-    const d = map.grid.data[tileCoord.y][tileCoord.x];
-    if (d.biome === 'town') {
-      towns.push({x: d.x, y: d.y, x_tile: tileCoord.x, y_tile: tileCoord.y});
-    }
-  });
+	// towns
+	const towns = [];
+	gridForEach(map.grid, 0, (tileCoord) => {
+		const d = map.grid.data[tileCoord.y][tileCoord.x];
+		if (d.biome === 'town') {
+			towns.push({ x: d.x, y: d.y });
+		}
+	});
 
+	// streets
+	const streets = [];
+	for (const from of towns) {
+		const toList = towns
+			.filter(to => (from.x != to.x) || (from.y != to.y))
+			.map(to => ({ x: to.x, y: to.y, distance: distance(from, to) }));
+		// only search the closest town
+		if (toList.length > 0) {
+			toList.sort((a, b) => a.distance > b.distance ? 1 : -1);
+			streets.push({ from: from, to: toList[0] });
+		}
+	}
+	const SHOW_STREETS = true;
+	if (SHOW_STREETS) {
+		for (const street of streets) {
+			elementMap.appendChild(svgutil.createLine(street.from, street.to, '#f40'));
+		}
+	}
 
-  // function to generate number between 0 and 1 depending on two seed points
-  function interpol(from, to, ratio) {
-    const x = from.x + (to.x - from.x) * ratio
-    const y = from.y + (to.y - from.y) * ratio
-    return {
-      x: x, y: y
-    }
-  }
+	// mountains
+	const items = [];
+	gridForEach(map.grid, 0, (tileCoord) => {
+		const p = map.grid.data[tileCoord.y][tileCoord.x];
+		if (p.biome === 'mountain') {
+			const node = images.mountains[Math.floor(p.random * images.mountains.length)].cloneNode(true);
+			const xScale = 1.1 + (p.random * 0.2);
+			const yScale = 1.3 + (p.random * 0.2);
+			items.push({ x: p.x, y: p.y, xs: xScale, ys: yScale, node: node });
+		} else if (p.biome === 'tree') {
+			// const i = Math.floor(p.random * images.trees.length);
+			const i = 1;
+			const node = images.trees[i].cloneNode(true);
+			const xScale = 0.8 + (p.random * 0.4);
+			const yScale = 0.8 + (p.random * 0.4);
+			items.push({ x: p.x, y: p.y, xs: xScale, ys: yScale, node: node });
+		} else if (p.biome === 'town') {
+			const node = images.towns[0].cloneNode(true);
+			const xScale = 1.0;
+			const yScale = 1.0;
+			items.push({ x: p.x, y: p.y, xs: xScale, ys: yScale, node: node });
+		}
+	});
 
-  // streets
-  const streets = [];
-  for (const from of towns) {
-    const toList = towns.filter(to => (from.x != to.x) || (from.y != to.y))
-                       .map(to => ({
-                              x: to.x,
-                              y: to.y,
-                              distance: distance(from, to),
-                              x_tile: to.x_tile,
-                              y_tile: to.y_tile
-                            }));
-    // only search the closest town
-    if (toList.length > 0) {
-      toList.sort((a, b) => a.distance > b.distance ? 1 : -1);
-      streets.push({from: from, to: toList[0]});
-    }
-  }
-  //   console.log(streets);
-  const SHOW_STREETS_zigzag = false;
-  if (SHOW_STREETS_zigzag) {
-    for (const street of streets) {
-      let p_from = street.from;
-      for (let i = 0; i <= 10; i++) {
-        const ratio = i / 10;
-        const p_to = interpol(
-            street.from, {x: street.to.x, y: street.to.y + 50 * Math.random()},
-            ratio);
-        elementMap.appendChild(
-            svgutil.createLine(p_from, p_to, i % 2 == 0 ? '#00f' : '#f00'));
+	items.sort((a, b) => {
+		return (a.y > b.y) ? 1 : -1;
+	});
+	for (const item of items) {
+		const node = item.node;
+		node.setAttribute('transform', 'translate(' + item.x + ' ' + item.y + ') scale(' + item.xs + ' ' + item.ys + ')');
+		elementMap.appendChild(node);
+	}
 
-        p_from = p_to;
-      }
-      elementMap.appendChild(svgutil.createLine(p_from, street.to, '#0f0'));
-    }
-  }
+	// draw coast
+	gridForEach(map.grid, 1, (tileCoord) => {
+		const p = map.grid.data[tileCoord.y][tileCoord.x];
+		const pl = map.grid.data[tileCoord.y + 0][tileCoord.x - 1];
+		const pr = map.grid.data[tileCoord.y + 0][tileCoord.x + 1];
+		const pt = map.grid.data[tileCoord.y - 1][tileCoord.x - 0];
+		const pb = map.grid.data[tileCoord.y + 1][tileCoord.x + 0];
+		const ptl = map.grid.data[tileCoord.y - 1][tileCoord.x - 1];
+		const ptr = map.grid.data[tileCoord.y - 1][tileCoord.x + 1];
+		const pbl = map.grid.data[tileCoord.y + 1][tileCoord.x - 1];
+		const pbr = map.grid.data[tileCoord.y + 1][tileCoord.x + 1];
+		let ps = [];
 
-  const SHOW_STREETS_natural = true;
-  if (SHOW_STREETS_natural) {
-    for (const street of streets) {
-      let p_start = street.from;
-      let p_end = street.to;
+		// tr
+		if (p.biome === 'water' && pt.biome === 'water' && ptr.biome === 'water' && pr.biome !== 'water') {
+			ps.push(ptr);
+		}
+		if (p.biome === 'water' && pt.biome === 'water' && ptr.biome !== 'water' && pr.biome !== 'water') {
+			ps.push(pt);
+		}
+		if (p.biome === 'water' && pt.biome !== 'water' && ptr.biome !== 'water' && pr.biome === 'water') {
+			ps.push(pr);
+		}
+		if (p.biome === 'water' && pt.biome !== 'water' && ptr.biome === 'water' && pr.biome === 'water') {
+			ps.push(ptr);
+		}
+		// br
+		if (p.biome === 'water' && pb.biome === 'water' && pbr.biome === 'water' && pr.biome !== 'water') {
+			ps.push(pbr);
+		}
+		if (p.biome === 'water' && pb.biome === 'water' && pbr.biome !== 'water' && pr.biome !== 'water') {
+			ps.push(pb);
+		}
+		if (p.biome === 'water' && pb.biome !== 'water' && pbr.biome === 'water' && pr.biome === 'water') {
+			ps.push(pbr);
+		}
+		if (p.biome === 'water' && pb.biome !== 'water' && pbr.biome !== 'water' && pr.biome === 'water') {
+			ps.push(pr);
+		}
+		// bl
+		if (p.biome === 'water' && pb.biome === 'water' && pbl.biome === 'water' && pl.biome !== 'water') {
+			ps.push(pbl);
+		}
+		if (p.biome === 'water' && pb.biome === 'water' && pbl.biome !== 'water' && pl.biome !== 'water') {
+			ps.push(pb);
+		}
+		if (p.biome === 'water' && pb.biome !== 'water' && pbl.biome === 'water' && pl.biome === 'water') {
+			ps.push(pbl);
+		}
+		if (p.biome === 'water' && pb.biome !== 'water' && pbl.biome !== 'water' && pl.biome === 'water') {
+			ps.push(pl);
+		}
+		// tl
+		if (p.biome === 'water' && pt.biome === 'water' && ptl.biome === 'water' && pl.biome !== 'water') {
+			ps.push(ptl);
+		}
+		if (p.biome === 'water' && pt.biome === 'water' && ptl.biome !== 'water' && pl.biome !== 'water') {
+			ps.push(pt);
+		}
+		if (p.biome === 'water' && pt.biome !== 'water' && ptl.biome === 'water' && pl.biome === 'water') {
+			ps.push(ptl);
+		}
+		if (p.biome === 'water' && pt.biome !== 'water' && ptl.biome !== 'water' && pl.biome === 'water') {
+			ps.push(pl);
+		}
 
-      for (let i = 0; i <= 10; i++) {
-        const delta_x = street.to.x_tile - p_start.x_tile;
-        const delta_y = street.to.y_tile - p_start.y_tile;
+		if (ps.length == 2) {
+			elementMap.appendChild(svgutil.createQuadraticBezier(middle(p, ps[0]), p, middle(p, ps[1]), '#00f'));
+		} else if (ps.length == 4) {
+			// other combinations 0213 may also work
+			elementMap.appendChild(svgutil.createQuadraticBezier(middle(p, ps[0]), p, middle(p, ps[2]), '#00f'));
+			elementMap.appendChild(svgutil.createQuadraticBezier(middle(p, ps[1]), p, middle(p, ps[3]), '#00f'));
+		}
+	});
 
-        p_end = {...p_start};
-
-        // console.log('start', p_start, p_end, delta_x, delta_y);
-
-        if (Math.abs(delta_x) > Math.abs(delta_y)) {
-          p_end.x_tile += Math.sign(delta_x);
-
-          if (p_end.x_tile < 0) {
-            p_end.x_tile = 0
-          }
-          if (p_end.x_tile > options.width) {
-            p_end.x_tile = options.width
-          }
-
-        } else {
-          console.log('hallo');
-          p_end.y_tile += Math.sign(delta_y);
-          if (p_end.y_tile < 0) {
-            p_end.y_tile = 0
-          }
-          if (p_end.y_tile > options.width) {
-            p_end.y_tile = options.width
-          }
-        }
-        console.log(
-            delta_x, delta_y, Math.sign(delta_x), Math.sign(delta_y), p_start,
-            p_end);
-        // console.log(map.grid.data[p_end.y_tile][p_end.x_tile]);
-        p_end.x = map.grid.data[p_end.y_tile][p_end.x_tile].x;
-        p_end.y = map.grid.data[p_end.y_tile][p_end.x_tile].y;
-        elementMap.appendChild(svgutil.createLine(p_start, p_end, 'rgb(204, 153, 0)',5));
-        p_start = p_end;
-      }
-
-      const p_from = map.grid.data[street.from.y_tile][street.from.x_tile];
-      const p_to = map.grid.data[street.from.y_tile][street.from.x_tile + 1];
-
-      //   elementMap.appendChild(svgutil.createLine(p_from, p_to, '#00f'));
-    }
-  }
-
-  // mountains
-  const items = [];
-  gridForEach(map.grid, 0, (tileCoord) => {
-    const p = map.grid.data[tileCoord.y][tileCoord.x];
-    if (p.biome === 'mountain') {
-      const node =
-          images.mountains[Math.floor(p.random * images.mountains.length)]
-              .cloneNode(true);
-      const xScale = 1.1 + (p.random * 0.2);
-      const yScale = 1.3 + (p.random * 0.2);
-      items.push({x: p.x, y: p.y, xs: xScale, ys: yScale, node: node});
-    } else if (p.biome === 'tree') {
-      // const i = Math.floor(p.random * images.trees.length);
-
-	  const i = 1;
-
-	  const treeToModify= images.trees[i]
-	  const leaves =  treeToModify.querySelector('#layer1 #path58');
-	  const stroke =  treeToModify.querySelector('#layer1 #path48');
-	  const randomGreen =p.random*40
-	  const randomRed =p.random*30
-	  leaves.style.fill=`rgb(20,${randomGreen+80},20)`
-	  leaves.style.stroke=`rgb(20,${randomGreen+40},20)`
-	  stroke.style.fill=`rgb(${randomRed +50}, 50, 10)`
-	  stroke.style.stroke=`rgb(${randomRed+50}, 50, 10)`
-
-
-      const node = images.trees[i].cloneNode(true);
-      const xScale = 0.8 + (p.random * 0.4);
-      const yScale = 0.8 + (p.random * 0.4);
-      items.push({x: p.x, y: p.y, xs: xScale, ys: yScale, node: node});
-    } else if (p.biome === 'town') {
-      const node = images.towns[0].cloneNode(true);
-      const xScale = 1.0;
-      const yScale = 1.0;
-      items.push({x: p.x, y: p.y, xs: xScale, ys: yScale, node: node});
-    }
-  });
-
-  items.sort((a, b) => {
-    return (a.y > b.y) ? 1 : -1;
-  });
-  for (const item of items) {
-    const node = item.node;
-    node.setAttribute(
-        'transform',
-        'translate(' + item.x + ' ' + item.y + ') scale(' + item.xs + ' ' +
-            item.ys + ')');
-    elementMap.appendChild(node);
-  }
-
-  // draw coast
-  gridForEach(map.grid, 1, (tileCoord) => {
-    const p = map.grid.data[tileCoord.y][tileCoord.x];
-    const pl = map.grid.data[tileCoord.y + 0][tileCoord.x - 1];
-    const pr = map.grid.data[tileCoord.y + 0][tileCoord.x + 1];
-    const pt = map.grid.data[tileCoord.y - 1][tileCoord.x - 0];
-    const pb = map.grid.data[tileCoord.y + 1][tileCoord.x + 0];
-    const ptl = map.grid.data[tileCoord.y - 1][tileCoord.x - 1];
-    const ptr = map.grid.data[tileCoord.y - 1][tileCoord.x + 1];
-    const pbl = map.grid.data[tileCoord.y + 1][tileCoord.x - 1];
-    const pbr = map.grid.data[tileCoord.y + 1][tileCoord.x + 1];
-    let ps = [];
-
-    // tr
-    if (p.biome === 'water' && pt.biome === 'water' && ptr.biome === 'water' &&
-        pr.biome !== 'water') {
-      ps.push(ptr);
-    }
-    if (p.biome === 'water' && pt.biome === 'water' && ptr.biome !== 'water' &&
-        pr.biome !== 'water') {
-      ps.push(pt);
-    }
-    if (p.biome === 'water' && pt.biome !== 'water' && ptr.biome !== 'water' &&
-        pr.biome === 'water') {
-      ps.push(pr);
-    }
-    if (p.biome === 'water' && pt.biome !== 'water' && ptr.biome === 'water' &&
-        pr.biome === 'water') {
-      ps.push(ptr);
-    }
-    // br
-    if (p.biome === 'water' && pb.biome === 'water' && pbr.biome === 'water' &&
-        pr.biome !== 'water') {
-      ps.push(pbr);
-    }
-    if (p.biome === 'water' && pb.biome === 'water' && pbr.biome !== 'water' &&
-        pr.biome !== 'water') {
-      ps.push(pb);
-    }
-    if (p.biome === 'water' && pb.biome !== 'water' && pbr.biome === 'water' &&
-        pr.biome === 'water') {
-      ps.push(pbr);
-    }
-    if (p.biome === 'water' && pb.biome !== 'water' && pbr.biome !== 'water' &&
-        pr.biome === 'water') {
-      ps.push(pr);
-    }
-    // bl
-    if (p.biome === 'water' && pb.biome === 'water' && pbl.biome === 'water' &&
-        pl.biome !== 'water') {
-      ps.push(pbl);
-    }
-    if (p.biome === 'water' && pb.biome === 'water' && pbl.biome !== 'water' &&
-        pl.biome !== 'water') {
-      ps.push(pb);
-    }
-    if (p.biome === 'water' && pb.biome !== 'water' && pbl.biome === 'water' &&
-        pl.biome === 'water') {
-      ps.push(pbl);
-    }
-    if (p.biome === 'water' && pb.biome !== 'water' && pbl.biome !== 'water' &&
-        pl.biome === 'water') {
-      ps.push(pl);
-    }
-    // tl
-    if (p.biome === 'water' && pt.biome === 'water' && ptl.biome === 'water' &&
-        pl.biome !== 'water') {
-      ps.push(ptl);
-    }
-    if (p.biome === 'water' && pt.biome === 'water' && ptl.biome !== 'water' &&
-        pl.biome !== 'water') {
-      ps.push(pt);
-    }
-    if (p.biome === 'water' && pt.biome !== 'water' && ptl.biome === 'water' &&
-        pl.biome === 'water') {
-      ps.push(ptl);
-    }
-    if (p.biome === 'water' && pt.biome !== 'water' && ptl.biome !== 'water' &&
-        pl.biome === 'water') {
-      ps.push(pl);
-    }
-
-    if (ps.length == 2) {
-      elementMap.appendChild(svgutil.createQuadraticBezier(
-          middle(p, ps[0]), p, middle(p, ps[1]), '#00f'));
-    } else if (ps.length == 4) {
-      // other combinations 0213 may also work
-      elementMap.appendChild(svgutil.createQuadraticBezier(
-          middle(p, ps[0]), p, middle(p, ps[2]), '#00f'));
-      elementMap.appendChild(svgutil.createQuadraticBezier(
-          middle(p, ps[1]), p, middle(p, ps[3]), '#00f'));
-    }
-  });
-
-  if (isDrawBorder) {
-    elementMap.appendChild(
-        svgutil.createBorder(options.width, options.height, options.gridSize));
-  }
+	if (isDrawBorder) {
+		elementMap.appendChild(svgutil.createBorder(options.width, options.height, options.gridSize));
+	}
 }
 
 async function main() {
-  const mountains =
-      await Promise.all(['mountain1.svg', 'mountain2.svg', 'mountain3.svg'].map(
-          $ => svgutil.load($)));
-  const trees =
-      await Promise.all(['tree1.svg', 'tree2.svg'].map($ => svgutil.load($)));
-  const towns = await Promise.all(['town1.svg'].map($ => svgutil.load($)));
-  const images = {mountains, trees, towns};
-  const options = {
-    width: 1000,
-    height: 700,
-    gridSize: 25,
-  };
+	const mountains = await Promise.all(['mountain1.svg', 'mountain2.svg', 'mountain3.svg'].map($ => svgutil.load($)));
+	const trees = await Promise.all(['tree1.svg', 'tree2.svg'].map($ => svgutil.load($)));
+	const towns = await Promise.all(['town1.svg'].map($ => svgutil.load($)));
+	const images = { mountains, trees, towns };
+	const options = {
+		width: 1000,
+		height: 700,
+		gridSize: 25,
+	};
 
-  let map = null;
+	let map = null;
 
-  function clickCreate() {
-    const seed = parseFloat(document.getElementById('seed').value);
-    map = create(seed, options);
-    // map.grid.data[17][35].biome = 'water';
-    // map.grid.data[17][36].biome = 'water';
-    draw(map, images, options);
-  }
+	function clickCreate() {
+		const seed = parseFloat(document.getElementById('seed').value);
+		map = create(seed, options);
+		// map.grid.data[17][35].biome = 'water';
+		// map.grid.data[17][36].biome = 'water';
+		draw(map, images, options);
+	}
 
-  function clickDraw() {
-    draw(map, images, options);
-  }
+	function clickDraw() {
+		draw(map, images, options);
+	}
 
-  function clickMap(event) {
-    const x = Math.floor(event.offsetX / GRID_SIZE);
-    const y = Math.floor(event.offsetY / GRID_SIZE);
-    console.log(x, y);
-    map.grid.data[y][x].biome = 'water';
-    draw(map, images, options);
-  }
+	function clickMap(event) {
+		const x = Math.floor(event.offsetX / GRID_SIZE);
+		const y = Math.floor(event.offsetY / GRID_SIZE);
+		console.log(x, y);
+		map.grid.data[y][x].biome = 'water';
+		draw(map, images, options);
+	}
 
-  document.getElementById('create').addEventListener('click', clickCreate);
-  document.getElementById('draw-grid').addEventListener('change', clickDraw);
-  document.getElementById('draw-biomes').addEventListener('change', clickDraw);
-  document.getElementById('draw-rose').addEventListener('change', clickDraw);
-  document.getElementById('draw-border').addEventListener('change', clickDraw);
-  document.getElementById('svg').addEventListener('click', clickMap);
+	document.getElementById('create').addEventListener('click', clickCreate);
+	document.getElementById('draw-grid').addEventListener('change', clickDraw);
+	document.getElementById('draw-biomes').addEventListener('change', clickDraw);
+	document.getElementById('draw-rose').addEventListener('change', clickDraw);
+	document.getElementById('draw-border').addEventListener('change', clickDraw);
+	document.getElementById('svg').addEventListener('click', clickMap);
 
-  clickCreate();
+	clickCreate();
 }
 
 document.addEventListener('DOMContentLoaded', main);
