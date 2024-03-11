@@ -132,7 +132,7 @@ function create(seed, options) {
 
 	function selectBiome(p) {
 		if (p.level > 1.4) return 'mountain';
-		if ((p.level > 1.1) && (p.level < 1.2)) return 'tree';
+		if ((p.level > 1.1) && (p.level < 1.25)) return 'tree';
 		if (p.level > 1.0 && p.random < 0.02) return 'town';
 		if (p.level > 0.8) return 'grass';
 		return 'water';
@@ -225,7 +225,7 @@ function draw(map, images, options) {
 		if (p.biome === 'mountain') {
 			const node = images.mountains[Math.floor(p.random * images.mountains.length)].cloneNode(true);
 			const xScale = 1.1 + (p.random * 0.2);
-			const yScale = 1.3 + (p.random * 0.2);
+			const yScale = 0.1 + (p.random * 0.1) + p.level * 1.2;
 			items.push({ x: p.x, y: p.y, xs: xScale, ys: yScale, node: node });
 		} else if (p.biome === 'tree') {
 			// const i = Math.floor(p.random * images.trees.length);
@@ -242,6 +242,7 @@ function draw(map, images, options) {
 		}
 	});
 
+	// sort from back to forth
 	items.sort((a, b) => {
 		return (a.y > b.y) ? 1 : -1;
 	});
