@@ -17,14 +17,16 @@ Current state of the project: Trying out different ideas, later then merge some 
 - Lakes
 - Map Scale
 - Map Seed
-- Mountains
+- Mountains, Ridges
+- Agricultural Field
 - Names (Map, Towns, Lakes, Rivers, ...)
-- Places of Interest (Volcano, Pit, Cave, Dungeon, ...)
+- Places of Interest (Obelisk, Volcano, Pit, Cave, Dungeon, Fortress, Portal, ...)
 - Rivers
+- Hills
 - Shadows / Lights
 - Streets / Paths
 - Towns
-- Trees
+- Trees, Forest
 
 # Inspiration
 
@@ -94,3 +96,4 @@ Current state of the project: Trying out different ideas, later then merge some 
 
 - https://grishaverse.com/map-of-the-grishaverse/
 - https://www.illustrationx.com/artists/MikeHall/103771
+- https://www.robbwallace.co.uk/news/best-fantasy-map-generators/
