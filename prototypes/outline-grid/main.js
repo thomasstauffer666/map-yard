@@ -110,16 +110,13 @@ function isUint32(x) {
 }
 */
 
+/*
+function uniq(array) {
+	return [...new Set(array)];
+}
+*/
+
 function create(seed, options) {
-	// this would is the only user controlled number
-	// const seed = 0.3; // Math.random();
-
-	const seeds = {
-		random: 0.7,
-		x: 0.9,
-		y: 0.8,
-	};
-
 	const perlin = perlinCreate(seed, 10 + 2, 8 + 2);
 
 	const gridBorderMin = 0.2;
@@ -142,14 +139,15 @@ function create(seed, options) {
 	gridForEach(g, 0, (tileCoord) => {
 		const p = g.data[tileCoord.y][tileCoord.x];
 		// currently using the same random number for many things (e.g. selected object, size of objects)
-		p.random = rnhNorm([seed, seeds.random, tileCoord.x, tileCoord.y]);
-		const seedX = [seed, seeds.x, tileCoord.x, tileCoord.y];
-		const seedY = [seed, seeds.y, tileCoord.x, tileCoord.y];
+		p.random = rnhNorm([seed, 0.7, tileCoord.x, tileCoord.y]);
+		const seedX = [seed, 0.9, tileCoord.x, tileCoord.y];
+		const seedY = [seed, 0.8, tileCoord.x, tileCoord.y];
 		p.x = (rnhMinMax(seedX, gridBorderMin, gridBorderMax) + tileCoord.x) * options.gridSize;
 		p.y = (rnhMinMax(seedY, gridBorderMin, gridBorderMax) + tileCoord.y) * options.gridSize;
 		let noise = perlinNoise(perlin, { x: p.x / 200, y: p.y / 200 });
 		p.level = noise + 1.0; // 0 .. 2
-		p.biome = selectBiome(p);
+		const isBorder = (tileCoord.x === 0) || (tileCoord.y === 0) || (tileCoord.x === (w - 1)) || (tileCoord.y === (h - 1));
+		p.biome = isBorder ? 'grass' : selectBiome(p);
 	});
 
 	return { grid: g };
@@ -194,28 +192,30 @@ function draw(map, images, options) {
 	// towns
 	const towns = [];
 	gridForEach(map.grid, 0, (tileCoord) => {
-		const d = map.grid.data[tileCoord.y][tileCoord.x];
-		if (d.biome === 'town') {
-			towns.push({ x: d.x, y: d.y });
+		const p = map.grid.data[tileCoord.y][tileCoord.x];
+		if (p.biome === 'town') {
+			towns.push({ x: tileCoord.x, y: tileCoord.y });
 		}
 	});
 
 	// streets
+
 	const streets = [];
 	for (const from of towns) {
-		const toList = towns
-			.filter(to => (from.x != to.x) || (from.y != to.y))
-			.map(to => ({ x: to.x, y: to.y, distance: distance(from, to) }));
-		// only search the closest town
+		const toList = towns.map(to => ({ x: to.x, y: to.y, distance: distance(from, to) }));
+		// in this algorithm, only the cloests town have streets to each other
 		if (toList.length > 0) {
 			toList.sort((a, b) => a.distance > b.distance ? 1 : -1);
-			streets.push({ from: from, to: toList[0] });
+			const to = { x: toList[1].x, y: toList[1].y };
+			streets.push({from,to});
 		}
 	}
 	const SHOW_STREETS = true;
 	if (SHOW_STREETS) {
 		for (const street of streets) {
-			elementMap.appendChild(svgutil.createLine(street.from, street.to, '#f40'));
+			const pFrom = map.grid.data[street.from.y][street.from.x];
+			const pTo = map.grid.data[street.to.y][street.to.x];
+			elementMap.appendChild(svgutil.createLine(pFrom, pTo, '#f40'));
 		}
 	}
 
@@ -360,8 +360,6 @@ async function main() {
 	function clickCreate() {
 		const seed = parseFloat(document.getElementById('seed').value);
 		map = create(seed, options);
-		// map.grid.data[17][35].biome = 'water';
-		// map.grid.data[17][36].biome = 'water';
 		draw(map, images, options);
 	}
 
@@ -370,8 +368,8 @@ async function main() {
 	}
 
 	function clickMap(event) {
-		const x = Math.floor(event.offsetX / GRID_SIZE);
-		const y = Math.floor(event.offsetY / GRID_SIZE);
+		const x = Math.floor(event.offsetX / options.gridSize);
+		const y = Math.floor(event.offsetY / options.gridSize);
 		console.log(x, y);
 		map.grid.data[y][x].biome = 'water';
 		draw(map, images, options);
