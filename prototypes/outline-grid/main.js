@@ -19,12 +19,6 @@ function float2uint32(floats) {
 	return Array.from(uint32Array);
 }
 
-// https://en.wikipedia.org/wiki/Smoothstep
-// 0 <= x <= 1
-function smootherstep(x) {
-	return 6 * (x ** 5) - 15 * (x ** 4) + 10 * (x ** 3);
-}
-
 // https://en.wikipedia.org/wiki/Linear_interpolation
 /*
 function lerp(a, b, x) {
@@ -71,6 +65,11 @@ function rnhMinMax(seeds, min, max) {
 	return min + (r * (max - min));
 }
 
+function rnhMinMaxInt(seeds, minInclusive, maxExclusive) {
+	const r = rnhNorm(seeds);
+	return minInclusive + Math.floor(r * (maxExclusive - minInclusive));
+}
+
 // Perlin
 
 function perlinCreate(seed, width, height) {
@@ -82,6 +81,12 @@ function perlinCreate(seed, width, height) {
 }
 
 function perlinNoise(perlin, coord) {
+	// https://en.wikipedia.org/wiki/Smoothstep
+	// 0 <= x <= 1
+	function smootherstep(x) {
+		return 6 * (x ** 5) - 15 * (x ** 4) + 10 * (x ** 3);
+	}
+
 	function interpolate(a, b, x) {
 		return a + smootherstep(x) * (b - a);
 	}
@@ -107,12 +112,6 @@ function perlinNoise(perlin, coord) {
 /*
 function isUint32(x) {
 	return Number.isInteger(x) && (x >= 0) && (x <= UINT32_MAX);
-}
-*/
-
-/*
-function uniq(array) {
-	return [...new Set(array)];
 }
 */
 
@@ -144,7 +143,7 @@ function create(seed, options) {
 		const seedY = [seed, 0.8, tileCoord.x, tileCoord.y];
 		p.x = (rnhMinMax(seedX, gridBorderMin, gridBorderMax) + tileCoord.x) * options.gridSize;
 		p.y = (rnhMinMax(seedY, gridBorderMin, gridBorderMax) + tileCoord.y) * options.gridSize;
-		let noise = perlinNoise(perlin, { x: p.x / 200, y: p.y / 200 });
+		const noise = perlinNoise(perlin, { x: p.x / 200, y: p.y / 200 });
 		p.level = noise + 1.0; // 0 .. 2
 		const isBorder = (tileCoord.x === 0) || (tileCoord.y === 0) || (tileCoord.x === (w - 1)) || (tileCoord.y === (h - 1));
 		p.biome = isBorder ? 'grass' : selectBiome(p);
@@ -170,6 +169,7 @@ function draw(map, images, options) {
 		elementMap.appendChild(svgutil.createGrid(options.width, options.height, options.gridSize));
 	}
 
+	// rose
 	if (isDrawRose) {
 		elementMap.appendChild(svgutil.createRose({ x: options.width - 200, y: options.height - 200 }));
 	}
@@ -189,7 +189,7 @@ function draw(map, images, options) {
 		});
 	}
 
-	// towns
+	// search towns
 	const towns = [];
 	gridForEach(map.grid, 0, (tileCoord) => {
 		const p = map.grid.data[tileCoord.y][tileCoord.x];
@@ -198,28 +198,31 @@ function draw(map, images, options) {
 		}
 	});
 
-	// streets
-
+	// select streets
+	const numberOfStreets = towns.length;
 	const streets = [];
-	for (const from of towns) {
-		const toList = towns.map(to => ({ x: to.x, y: to.y, distance: distance(from, to) }));
-		// in this algorithm, only the cloests town have streets to each other
-		if (toList.length > 0) {
-			toList.sort((a, b) => a.distance > b.distance ? 1 : -1);
-			const to = { x: toList[1].x, y: toList[1].y };
-			streets.push({from,to});
+	for (let i = 0; i < numberOfStreets; i += 1) {
+		const a = rnhMinMaxInt([seed, 0.2, i], 0, numberOfStreets);
+		const b = rnhMinMaxInt([seed, 0.3, i], 0, numberOfStreets);
+		const from = Math.min(a, b);
+		const to = Math.max(b, a);
+		if ((from !== to) && (streets.findIndex($ => ($.from === from) && ($.to === to)) === -1)) {
+			streets.push({ from: from, to: to });
 		}
 	}
+
 	const SHOW_STREETS = true;
 	if (SHOW_STREETS) {
 		for (const street of streets) {
-			const pFrom = map.grid.data[street.from.y][street.from.x];
-			const pTo = map.grid.data[street.to.y][street.to.x];
+			const townFrom = towns[street.from];
+			const townTo = towns[street.to];
+			const pFrom = map.grid.data[townFrom.y][townFrom.x];
+			const pTo = map.grid.data[townTo.y][townTo.x];
 			elementMap.appendChild(svgutil.createLine(pFrom, pTo, '#f40'));
 		}
 	}
 
-	// grid elements
+	// draw grid elements
 	const items = [];
 	gridForEach(map.grid, 0, (tileCoord) => {
 		const p = map.grid.data[tileCoord.y][tileCoord.x];
@@ -253,8 +256,6 @@ function draw(map, images, options) {
 			items.push({ x: p.x, y: p.y, xs: xScale, ys: yScale, node: node });
 		}
 	});
-
-	// sort from back to forth
 	items.sort((a, b) => {
 		return (a.y > b.y) ? 1 : -1;
 	});
