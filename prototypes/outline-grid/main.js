@@ -1,5 +1,6 @@
 import * as svgutil from './svgutil.js';
 import * as rnh from './rnh.js';
+import * as grid from './grid.js';
 
 function middle(a, b) {
 	return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
@@ -18,34 +19,14 @@ function lerp(a, b, x) {
 }
 */
 
-function gridMake(width, height) {
-	const data = [];
-	for (let y = 0; y < height; y += 1) {
-		const row = [];
-		for (let x = 0; x < width; x += 1) {
-			row.push({});
-		}
-		data.push(row);
-	}
-	return { width: width, height: height, data: data };
-}
-
-function gridForEach(grid, border, callable) {
-	for (let y = border; y < (grid.height - border); y += 1) {
-		for (let x = border; x < (grid.width - border); x += 1) {
-			callable({ x: x, y: y });
-		}
-	}
-}
-
 // Perlin
 
 function perlinCreate(seed, width, height) {
-	const grid = gridMake(width, height);
-	gridForEach(grid, 0, (tileCoord) => {
-		grid.data[tileCoord.y][tileCoord.x] = rnh.unitVector([seed, tileCoord.x, tileCoord.y]);
+	const g = grid.make(width, height);
+	grid.forEach(g, 0, (tileCoord) => {
+		g.data[tileCoord.y][tileCoord.x] = rnh.unitVector([seed, tileCoord.x, tileCoord.y]);
 	});
-	return grid;
+	return g;
 }
 
 function perlinNoise(perlin, coord) {
@@ -91,8 +72,7 @@ function create(seed, options) {
 
 	const w = Math.floor(options.width / options.gridSize);
 	const h = Math.floor(options.height / options.gridSize);
-	// TOOD use gridForEach for init?
-	const g = gridMake(w, h);
+	const g = grid.make(w, h);
 
 	function selectBiome(p) {
 		if (p.level > 1.4) return 'mountain';
@@ -103,7 +83,7 @@ function create(seed, options) {
 	}
 
 	// assign level & biomes
-	gridForEach(g, 0, (tileCoord) => {
+	grid.forEach(g, 0, (tileCoord) => {
 		const p = g.data[tileCoord.y][tileCoord.x];
 		// currently using the same random number for many things (e.g. selected object, size of objects)
 		p.random = rnh.norm([seed, 0.7, tileCoord.x, tileCoord.y]);
@@ -151,7 +131,7 @@ function draw(map, images, options) {
 		'mountain': '#999',
 	};
 	if (isDrawBiomes) {
-		gridForEach(map.grid, 0, (tileCoord) => {
+		grid.forEach(map.grid, 0, (tileCoord) => {
 			const p = map.grid.data[tileCoord.y][tileCoord.x];
 			elementMap.appendChild(svgutil.createCircle(p, 2, '', BIOMES_COLORS[p.biome]));
 		});
@@ -159,7 +139,7 @@ function draw(map, images, options) {
 
 	// search towns
 	const towns = [];
-	gridForEach(map.grid, 0, (tileCoord) => {
+	grid.forEach(map.grid, 0, (tileCoord) => {
 		const p = map.grid.data[tileCoord.y][tileCoord.x];
 		if (p.biome === 'town') {
 			towns.push({ x: tileCoord.x, y: tileCoord.y });
@@ -212,7 +192,7 @@ function draw(map, images, options) {
 
 	// draw grid elements
 	const items = [];
-	gridForEach(map.grid, 0, (tileCoord) => {
+	grid.forEach(map.grid, 0, (tileCoord) => {
 		const p = map.grid.data[tileCoord.y][tileCoord.x];
 		if (p.biome === 'mountain') {
 			const node = images.mountains[Math.floor(p.random * images.mountains.length)].cloneNode(true);
@@ -254,7 +234,7 @@ function draw(map, images, options) {
 	}
 
 	// draw coast
-	gridForEach(map.grid, 1, (tileCoord) => {
+	grid.forEach(map.grid, 1, (tileCoord) => {
 		const p = map.grid.data[tileCoord.y][tileCoord.x];
 		const pl = map.grid.data[tileCoord.y + 0][tileCoord.x - 1];
 		const pr = map.grid.data[tileCoord.y + 0][tileCoord.x + 1];
