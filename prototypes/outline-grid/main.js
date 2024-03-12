@@ -211,14 +211,34 @@ function draw(map, images, options) {
 		}
 	}
 
-	const SHOW_STREETS = true;
-	if (SHOW_STREETS) {
+	const SHOW_STREETS_LINE = false;
+	if (SHOW_STREETS_LINE) {
 		for (const street of streets) {
 			const townFrom = towns[street.from];
 			const townTo = towns[street.to];
 			const pFrom = map.grid.data[townFrom.y][townFrom.x];
 			const pTo = map.grid.data[townTo.y][townTo.x];
 			elementMap.appendChild(svgutil.createLine(pFrom, pTo, '#f40'));
+		}
+	}
+
+	const SHOW_STREETS_ZIGZAG = true;
+	if (SHOW_STREETS_ZIGZAG) {
+		for (const street of streets) {
+			const townStart = towns[street.from];
+			const townEnd = towns[street.to];
+			let tileCurrrent = { x: townStart.x, y: townStart.y };
+			const tileEnd = { x: townEnd.x, y: townEnd.y };
+			for (let n = 0; n < 100; n += 1) {
+				let tileNext = {
+					x: tileCurrrent.x + Math.sign(tileEnd.x - tileCurrrent.x),
+					y: tileCurrrent.y + Math.sign(tileEnd.y - tileCurrrent.y)
+				};
+				const pCurrent = map.grid.data[tileCurrrent.y][tileCurrrent.x];
+				const pNext = map.grid.data[tileNext.y][tileNext.x];
+				elementMap.appendChild(svgutil.createLine(pCurrent, pNext, '#f40'));
+				tileCurrrent = tileNext;
+			}
 		}
 	}
 
