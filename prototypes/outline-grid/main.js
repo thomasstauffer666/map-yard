@@ -93,8 +93,7 @@ function create(seed, options) {
 		p.y = (rnh.minMax(seedY, gridBorderMin, gridBorderMax) + tileCoord.y) * options.gridSize;
 		const noise = perlinNoise(perlin, { x: p.x / 200, y: p.y / 200 });
 		p.level = noise + 1.0; // 0 .. 2
-		const isBorder = (tileCoord.x === 0) || (tileCoord.y === 0) || (tileCoord.x === (w - 1)) || (tileCoord.y === (h - 1));
-		p.biome = isBorder ? 'grass' : selectBiome(p);
+		p.biome = grid.isBorder(g, tileCoord) ? 'grass' : selectBiome(p);
 	});
 
 	return { grid: g };
@@ -170,7 +169,7 @@ function draw(map, images, options) {
 		}
 	}
 
-	const SHOW_STREETS_ZIGZAG = true;
+	const SHOW_STREETS_ZIGZAG = false;
 	if (SHOW_STREETS_ZIGZAG) {
 		for (const street of streets) {
 			const townStart = towns[street.from];
@@ -186,6 +185,75 @@ function draw(map, images, options) {
 				const pNext = map.grid.data[tileNext.y][tileNext.x];
 				elementMap.appendChild(svgutil.createLine(pCurrent, pNext, '#f40'));
 				tileCurrrent = tileNext;
+			}
+		}
+	}
+
+	const SHOW_STREETS_BFS = true;
+	if (SHOW_STREETS_BFS) {
+		for (const street of streets) {
+			const townStart = towns[street.from];
+			const townEnd = towns[street.to];
+			//console.log(townStart, townEnd);
+
+			const queue = [];
+			const visited = [];
+
+			queue.push({ ...townStart });
+			visited.push({ ...townStart });
+
+			const same = (a, b) => (a.x == b.x) && (a.y == b.y);
+			let front = {};
+
+			for (let n = 0; n < 100000; n += 1) {
+				if (queue.length == 0) {
+					//console.log('queue empty');
+					break;
+				}
+
+				if (n > 10000) {
+					console.log('too long search');
+					break;
+				}
+
+				front = queue.shift();
+
+				if (same(front, townEnd)) {
+					//console.log('target reached');
+					break;
+				}
+
+				const t = { x: front.x + 0, y: front.y - 1 };
+				const b = { x: front.x + 0, y: front.y + 1 };
+				const l = { x: front.x - 1, y: front.y + 0 };
+				const r = { x: front.x + 1, y: front.y + 0 };
+
+				function visit(tile) {
+					const isVisited = visited.findIndex($ => same($, tile)) !== -1;
+					const isBorder = grid.isBorder(map.grid, tile);
+					const isWater = map.grid.data[tile.y][tile.x].biome === 'water';
+					if ((!isVisited) && (!isBorder) && (!isWater)) {
+						visited.push({ x: tile.x, y: tile.y, parent: front });
+						queue.push({ x: tile.x, y: tile.y });
+					}
+				}
+
+				visit(t);
+				visit(b);
+				visit(l);
+				visit(r);
+			}
+
+			let tileCurrent = visited[visited.findIndex($ => same($, front))];
+			for (let n = 0; n < 100; n += 1) {
+				if (tileCurrent.parent === undefined) {
+					break;
+				}
+				const tileNext = visited[visited.findIndex($ => same($, tileCurrent.parent))];
+				const pCurrent = map.grid.data[tileCurrent.y][tileCurrent.x];
+				const pNext = map.grid.data[tileNext.y][tileNext.x];
+				elementMap.appendChild(svgutil.createLine(pCurrent, pNext, '#f40'));
+				tileCurrent = tileNext;
 			}
 		}
 	}

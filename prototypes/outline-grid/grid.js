@@ -18,3 +18,7 @@ export function forEach(grid, border, callable) {
 		}
 	}
 }
+
+export function isBorder(grid, tile) {
+	return (tile.x === 0) || (tile.y === 0) || (tile.x === (grid.width - 1)) || (tile.y === (grid.height - 1));
+}
