@@ -227,6 +227,10 @@ function draw(map, images, options) {
 				const b = { x: front.x + 0, y: front.y + 1 };
 				const l = { x: front.x - 1, y: front.y + 0 };
 				const r = { x: front.x + 1, y: front.y + 0 };
+				const tl = { x: front.x - 1, y: front.y - 1 };
+				const tr = { x: front.x + 1, y: front.y - 1 };
+				const bl = { x: front.x - 1, y: front.y + 1 };
+				const br = { x: front.x + 1, y: front.y + 1 };
 
 				function visit(tile) {
 					const isVisited = visited.findIndex($ => same($, tile)) !== -1;
@@ -242,6 +246,10 @@ function draw(map, images, options) {
 				visit(b);
 				visit(l);
 				visit(r);
+				visit(tl);
+				visit(tr);
+				visit(bl);
+				visit(br);
 			}
 
 			let tileCurrent = visited[visited.findIndex($ => same($, front))];
@@ -298,6 +306,7 @@ function draw(map, images, options) {
 	for (const item of items) {
 		const node = item.node;
 		node.setAttribute('transform', 'translate(' + item.x + ' ' + item.y + ') scale(' + item.xs + ' ' + item.ys + ')');
+		// https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/vector-effect
 		elementMap.appendChild(node);
 	}
 
