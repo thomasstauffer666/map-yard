@@ -1,7 +1,5 @@
 import * as svgutil from './svgutil.js';
-import * as xxhash from './xxhash.js';
-
-const UINT32_MAX = 0xffffffff;
+import * as rnh from './rnh.js';
 
 function middle(a, b) {
 	return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
@@ -11,12 +9,6 @@ function distance(a, b) {
 	const dx = a.x - b.x;
 	const dy = a.y - b.y;
 	return Math.sqrt(dx ** 2 + dy ** 2);
-}
-
-function float2uint32(floats) {
-	const float32Array = new Float32Array(floats);
-	const uint32Array = new Uint32Array(float32Array.buffer);
-	return Array.from(uint32Array);
 }
 
 // https://en.wikipedia.org/wiki/Linear_interpolation
@@ -46,36 +38,12 @@ function gridForEach(grid, border, callable) {
 	}
 }
 
-// rnh = Random Number Hash
-
-function rnhUnitVector(seeds) {
-	const angle = rnhNorm(seeds) * 2 * Math.PI;
-	return { x: Math.cos(angle), y: Math.sin(angle) };
-}
-
-function rnhNorm(seeds) {
-	// const result = Math.random();
-	const result = xxhash.xxHash32(float2uint32(seeds), 0) / UINT32_MAX;
-	console.assert((result >= 0.0) && (result <= 1.0));
-	return result;
-}
-
-function rnhMinMax(seeds, min, max) {
-	const r = rnhNorm(seeds);
-	return min + (r * (max - min));
-}
-
-function rnhMinMaxInt(seeds, minInclusive, maxExclusive) {
-	const r = rnhNorm(seeds);
-	return minInclusive + Math.floor(r * (maxExclusive - minInclusive));
-}
-
 // Perlin
 
 function perlinCreate(seed, width, height) {
 	const grid = gridMake(width, height);
 	gridForEach(grid, 0, (tileCoord) => {
-		grid.data[tileCoord.y][tileCoord.x] = rnhUnitVector([seed, tileCoord.x, tileCoord.y]);
+		grid.data[tileCoord.y][tileCoord.x] = rnh.unitVector([seed, tileCoord.x, tileCoord.y]);
 	});
 	return grid;
 }
@@ -138,11 +106,11 @@ function create(seed, options) {
 	gridForEach(g, 0, (tileCoord) => {
 		const p = g.data[tileCoord.y][tileCoord.x];
 		// currently using the same random number for many things (e.g. selected object, size of objects)
-		p.random = rnhNorm([seed, 0.7, tileCoord.x, tileCoord.y]);
+		p.random = rnh.norm([seed, 0.7, tileCoord.x, tileCoord.y]);
 		const seedX = [seed, 0.9, tileCoord.x, tileCoord.y];
 		const seedY = [seed, 0.8, tileCoord.x, tileCoord.y];
-		p.x = (rnhMinMax(seedX, gridBorderMin, gridBorderMax) + tileCoord.x) * options.gridSize;
-		p.y = (rnhMinMax(seedY, gridBorderMin, gridBorderMax) + tileCoord.y) * options.gridSize;
+		p.x = (rnh.minMax(seedX, gridBorderMin, gridBorderMax) + tileCoord.x) * options.gridSize;
+		p.y = (rnh.minMax(seedY, gridBorderMin, gridBorderMax) + tileCoord.y) * options.gridSize;
 		const noise = perlinNoise(perlin, { x: p.x / 200, y: p.y / 200 });
 		p.level = noise + 1.0; // 0 .. 2
 		const isBorder = (tileCoord.x === 0) || (tileCoord.y === 0) || (tileCoord.x === (w - 1)) || (tileCoord.y === (h - 1));
@@ -202,8 +170,8 @@ function draw(map, images, options) {
 	const numberOfStreets = towns.length;
 	const streets = [];
 	for (let i = 0; i < numberOfStreets; i += 1) {
-		const a = rnhMinMaxInt([seed, 0.2, i], 0, numberOfStreets);
-		const b = rnhMinMaxInt([seed, 0.3, i], 0, numberOfStreets);
+		const a = rnh.minMaxInt([seed, 0.2, i], 0, numberOfStreets);
+		const b = rnh.minMaxInt([seed, 0.3, i], 0, numberOfStreets);
 		const from = Math.min(a, b);
 		const to = Math.max(b, a);
 		if ((from !== to) && (streets.findIndex($ => ($.from === from) && ($.to === to)) === -1)) {
