@@ -6,11 +6,13 @@ function middle(a, b) {
 	return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
 }
 
+/*
 function distance(a, b) {
 	const dx = a.x - b.x;
 	const dy = a.y - b.y;
 	return Math.sqrt(dx ** 2 + dy ** 2);
 }
+*/
 
 // https://en.wikipedia.org/wiki/Linear_interpolation
 /*
@@ -66,40 +68,22 @@ function isUint32(x) {
 
 function create(seed, options) {
 	const perlin = perlinCreate(seed, 10 + 2, 8 + 2);
-
-	const gridBorderMin = 0.2;
-	const gridBorderMax = 0.8;
-
-	const w = Math.floor(options.width / options.gridSize);
-	const h = Math.floor(options.height / options.gridSize);
-	const g = grid.make(w, h);
-
-	function selectBiome(p) {
-		if (p.level > 1.4) return 'mountain';
-		if ((p.level > 1.1) && (p.level < 1.25)) return 'tree';
-		if (p.level > 1.0 && p.random < 0.02) return 'town';
-		if (p.level > 0.8) return 'grass';
-		return 'water';
-	}
+	const width = Math.floor(options.width / options.gridSize);
+	const height = Math.floor(options.height / options.gridSize);
+	const map = { grid: grid.make(width, height) };
 
 	// assign level & biomes
-	grid.forEach(g, 0, (tileCoord) => {
-		const p = g.data[tileCoord.y][tileCoord.x];
-		// currently using the same random number for many things (e.g. selected object, size of objects)
-		p.random = rnh.norm([seed, 0.7, tileCoord.x, tileCoord.y]);
-		const seedX = [seed, 0.9, tileCoord.x, tileCoord.y];
-		const seedY = [seed, 0.8, tileCoord.x, tileCoord.y];
-		p.x = (rnh.minMax(seedX, gridBorderMin, gridBorderMax) + tileCoord.x) * options.gridSize;
-		p.y = (rnh.minMax(seedY, gridBorderMin, gridBorderMax) + tileCoord.y) * options.gridSize;
-		const noise = perlinNoise(perlin, { x: p.x / 200, y: p.y / 200 });
+	grid.forEach(map.grid, 0, (tileCoord) => {
+		const p = map.grid.data[tileCoord.y][tileCoord.x];
+		const noise = perlinNoise(perlin, { x: tileCoord.x / 8, y: tileCoord.y / 8 });
 		p.level = noise + 1.0; // 0 .. 2
-		p.biome = grid.isBorder(g, tileCoord) ? 'grass' : selectBiome(p);
+		console.assert((p.level >= 0) && (p.level <= 2.0));
 	});
 
-	return { grid: g };
+	return map;
 }
 
-function draw(map, images, options) {
+function draw(seed, map, images, options) {
 	const elementMap = document.getElementById('svg');
 	elementMap.innerHTML = '';
 	elementMap.setAttribute('width', options.width);
@@ -110,6 +94,27 @@ function draw(map, images, options) {
 	const isDrawRose = document.getElementById('draw-rose').checked;
 	const isDrawBorder = document.getElementById('draw-border').checked;
 	const isDrawColors = document.getElementById('draw-colors').checked;
+
+	// biomes
+	function selectBiome(p) {
+		if (p.level > 1.4) return 'mountain';
+		if ((p.level > 1.1) && (p.level < 1.25)) return 'tree';
+		if (p.level > 1.0 && p.random < 0.02) return 'town';
+		if (p.level > 0.8) return 'grass';
+		return 'water';
+	}
+	grid.forEach(map.grid, 0, (tileCoord) => {
+		const p = map.grid.data[tileCoord.y][tileCoord.x];
+		// currently using the same random number for many things (e.g. selected object, size of objects)
+		p.random = rnh.norm([seed, 0.7, tileCoord.x, tileCoord.y]);
+		const seedX = [seed, 0.9, tileCoord.x, tileCoord.y];
+		const seedY = [seed, 0.8, tileCoord.x, tileCoord.y];
+		const gridBorderMin = 0.2;
+		const gridBorderMax = 0.8;
+		p.x = (rnh.minMax(seedX, gridBorderMin, gridBorderMax) + tileCoord.x) * options.gridSize;
+		p.y = (rnh.minMax(seedY, gridBorderMin, gridBorderMax) + tileCoord.y) * options.gridSize;
+		p.biome = grid.isBorder(map.grid, tileCoord) ? 'grass' : selectBiome(p);
+	});
 
 	// grid
 	if (isDrawGrid) {
@@ -406,19 +411,21 @@ async function main() {
 	function clickCreate() {
 		const seed = parseFloat(document.getElementById('seed').value);
 		map = create(seed, options);
-		draw(map, images, options);
+		draw(seed, map, images, options);
 	}
 
 	function clickDraw() {
-		draw(map, images, options);
+		const seed = parseFloat(document.getElementById('seed').value);
+		draw(seed, map, images, options);
 	}
 
 	function clickMap(event) {
+		const seed = parseFloat(document.getElementById('seed').value);
 		const x = Math.floor(event.offsetX / options.gridSize);
 		const y = Math.floor(event.offsetY / options.gridSize);
-		console.log(x, y);
-		map.grid.data[y][x].biome = 'water';
-		draw(map, images, options);
+		console.log(x, y, map.grid.data[y][x].level);
+		map.grid.data[y][x].level -= 0.1;
+		draw(seed, map, images, options);
 	}
 
 	document.getElementById('create').addEventListener('click', clickCreate);
