@@ -9,6 +9,15 @@ Current state of the project: Trying out different ideas, later then merge some 
 - https://thomasstauffer666.github.io/map-yard/prototypes/gabriel-terrain-gen/index.html
 - https://thomasstauffer666.github.io/map-yard/prototypes/mountains-bezier/index.html
 - https://thomasstauffer666.github.io/map-yard/prototypes/outline-grid/index.html
+  - Ideas (amount of time needed to implement it)
+    - 1: Hills
+    - 1: a single "Place of Interest" (see below)
+    - 2: Palette (grayscale, night/day, color, ancient map, ...)
+    - 2: Scaling does not influence stroke thickness
+    - 3: Fill Lakes
+    - 3: Rivers (high to low)
+    - 3: Bridge: street & river
+    - 4: Streets Shortest Path (Dijkstra's Algorithm)
 
 # Elements
 
