@@ -19,10 +19,17 @@ function createLine(x1, y1, x2, y2) {
   return e;
 }
 
+function createImageElement(href) {
+  const e = document.createElementNS("http://www.w3.org/2000/svg", "image");
+  e.setAttribute("href", href);
+  return e;
+}
+
 function main() {
-  const mountain1 = document.getElementById("mountain1").contentDocument.children[0].children[2];
-  const mountain2 = document.getElementById("mountain2").contentDocument.children[0].children[2];
-  const mountain3 = document.getElementById("mountain1").contentDocument.children[0].children[2];
+  // https://www.freepik.com/free-vector/vintage-monochrome-mountains-set_7997411.html
+  const mountain1 = createImageElement("mountain1.svg");
+  const mountain2 = createImageElement("mountain2.svg");
+  const mountain3 = createImageElement("mountain1.svg");
 
   const mountains = [mountain1, mountain2, mountain3];
 
