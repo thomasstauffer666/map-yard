@@ -1,3 +1,4 @@
+
 import * as svgutil from './svgutil.js';
 import * as rnh from './rnh.js';
 import * as grid from './grid.js';
@@ -303,7 +304,13 @@ function draw(seed, map, images, options) {
 			const xScale = 1.0;
 			const yScale = 1.0;
 			items.push({ x: p.x, y: p.y, xs: xScale, ys: yScale, node: node });
-		}
+		} else if (p.biome === 'water') {
+            const hue = 200 + 30 * p.random; // Randomize between shades of blue
+            const saturation = 70 + 10 * p.random; // Random saturation
+            const lightness = 50 + 10 * p.random; // Random lightness
+            const waterColor = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+            p.color = waterColor; // Assign color to the water biome for rendering
+        }
 	});
 	items.sort((a, b) => {
 		return (a.y > b.y) ? 1 : -1;
